@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: "ASCII visualizer: generate flowcharts, architecture diagrams, sequence diagrams, and decision trees directly in the terminal using ASCII/Unicode box-drawing characters. Use when the user wants to visualize a concept, architecture, flow, or relationship without leaving the CLI. Triggers: /visualize, 'draw me', 'diagram', 'flowchart', 'ascii art', 'visualize', 'show me the architecture', 'map this out'. Do NOT use for complex multi-page visualizations (use /playground instead)."
+description: "ASCII visualizer: generate flowcharts, architecture diagrams, sequence diagrams, and decision trees directly in the terminal using ASCII/Unicode box-drawing characters. Use when the user wants to visualize a concept, architecture, flow, or relationship without leaving the CLI. Triggers: /learn-toolkit:visualize, 'draw me', 'diagram', 'flowchart', 'ascii art', 'visualize', 'show me the architecture', 'map this out'. Do NOT use for complex multi-page visualizations (use /learn-toolkit:playground instead)."
 argument-hint: "<concept or architecture to visualize>"
 disable-model-invocation: true
 metadata:
@@ -56,7 +56,7 @@ Output the diagram directly as text. No files, no HTML, no images.
 
 ### Example 1: Simple flowchart
 
-User says: `/visualize user login flow`
+User says: `/learn-toolkit:visualize user login flow`
 
 Output:
 ```
@@ -80,7 +80,7 @@ Output:
 
 ### Example 2: Architecture diagram
 
-User says: `/visualize microservices with API gateway`
+User says: `/learn-toolkit:visualize microservices with API gateway`
 
 Output:
 ```
@@ -107,7 +107,7 @@ Output:
 
 ### Example 3: Comparison table
 
-User says: `/visualize REST vs GraphQL vs gRPC`
+User says: `/learn-toolkit:visualize REST vs GraphQL vs gRPC`
 
 Output:
 ```
@@ -128,6 +128,6 @@ Output:
 
 | Error | Cause | Action |
 |-------|-------|--------|
-| No arguments provided | User typed just `/visualize` | Ask: "What would you like me to visualize? (e.g., 'user auth flow', 'microservices architecture')" |
+| No arguments provided | User typed just `/learn-toolkit:visualize` | Ask: "What would you like me to visualize? (e.g., 'user auth flow', 'microservices architecture')" |
 | Topic too broad | e.g., "visualize everything" | Ask user to narrow scope: "Which aspect? Architecture, data flow, or deployment?" |
 | Diagram too wide | Exceeds 100 chars | Break into multiple connected diagrams or simplify labels |

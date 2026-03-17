@@ -42,7 +42,7 @@ If `tvly` is found, check auth status (no API call needed):
 tvly --status 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=false"
 ```
 
-Set `HAS_TAVILY_SKILLS` = true only if both checks pass. When true, `tvly` commands are available directly (the `/learn` skill's `allowed-tools: Bash(tvly *)` grants permission). Available commands:
+Set `HAS_TAVILY_SKILLS` = true only if both checks pass. When true, `tvly` commands are available directly (the `/learn-toolkit:learn` skill's `allowed-tools: Bash(tvly *)` grants permission). Available commands:
 - `tvly search` — web search with LLM-optimized results
 - `tvly extract` — extract content from specific URLs
 - `tvly crawl` — crawl websites to local markdown
@@ -273,7 +273,7 @@ If `ck items create` or `ck items put` fails, warn user and continue — the com
 
 After the NotebookLM artifacts are complete, generate the other two skill outputs using the research already gathered. This gives the user the full 3-step learning experience in one workflow.
 
-#### Step 6a: ASCII Architecture Diagram (`/visualize`)
+#### Step 6a: ASCII Architecture Diagram (`/learn-toolkit:visualize`)
 
 Using the research summary from Phase 2, generate an ASCII diagram directly in the terminal. Pick the most appropriate diagram type for the topic:
 
@@ -284,7 +284,7 @@ Using the research summary from Phase 2, generate an ASCII diagram directly in t
 
 Output the diagram inline (same as `/learn-toolkit:visualize` would produce). Use Unicode box-drawing characters, keep width under 100 chars.
 
-#### Step 6b: Interactive Playground (`/playground`)
+#### Step 6b: Interactive Playground (`/learn-toolkit:playground`)
 
 Generate a standalone HTML playground file to `/tmp/playground-<topic-slug>.html` and open it in the browser. Use the research data from Phase 1-2 to populate it with accurate content.
 
@@ -342,7 +342,7 @@ Research saved to: /tmp/learn-<topic-slug>/
 
 ### Example 1: Full 3-step learning package
 
-User says: `/learn Next.js App Router`
+User says: `/learn-toolkit:learn Next.js App Router`
 
 Actions:
 1. Phase 0: ToolSearch finds Tavily MCP ✓, Exa ✓, NotebookLM ✓
@@ -360,7 +360,7 @@ Result: Complete learning package — ASCII diagram + interactive playground + 1
 
 ### Example 2: Tavily CLI only (no MCP)
 
-User says: `/learn Kafka event streaming` (Tavily MCP not configured, but `tvly` CLI installed)
+User says: `/learn-toolkit:learn Kafka event streaming` (Tavily MCP not configured, but `tvly` CLI installed)
 
 Actions:
 1. Phase 0: `tvly --version` found ✓, auth check passes ✓. ToolSearch finds Tavily MCP ✗, Exa ✓, NotebookLM ✓
@@ -375,7 +375,7 @@ Result: Same quality output, using CLI instead of MCP for Tavily
 
 ### Example 3: Missing backends — workflow stops
 
-User says: `/learn Kafka event streaming` (no Tavily/Exa configured)
+User says: `/learn-toolkit:learn Kafka event streaming` (no Tavily/Exa configured)
 
 Actions:
 1. Phase 0: `tvly` not found. ToolSearch finds Tavily MCP ✗, Exa ✗, NotebookLM ✓
@@ -386,7 +386,7 @@ Result: No research performed. User gets clear fix instructions.
 
 ### Example 4: Overflow to multiple notebooks
 
-User says: `/learn Kubernetes`
+User says: `/learn-toolkit:learn Kubernetes`
 
 Actions:
 1. Research yields 65 unique URLs across all backends
@@ -400,7 +400,7 @@ Result: Complete learning package — ASCII diagram + playground + 2 notebooks, 
 
 ### Example 5: Language override
 
-User says: `/learn GraphQL federation --language en`
+User says: `/learn-toolkit:learn GraphQL federation --language en`
 
 Actions: Same workflow, but all NotebookLM artifacts use `language="en"` instead of `"he"`
 
