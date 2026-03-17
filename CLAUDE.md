@@ -53,7 +53,7 @@ Then run `source ~/.zshrc` (or `~/.bashrc`) and restart Claude Code.
 
 ---
 
-If the user doesn't have API keys, that's fine — `/learn-toolkit:learn` falls back to built-in WebSearch. `/learn-toolkit:visualize` and `/learn-toolkit:playground` work with no keys at all.
+If the user doesn't have API keys, `/learn-toolkit:learn` will detect the missing backends at startup and show setup instructions. `/learn-toolkit:visualize` and `/learn-toolkit:playground` work with no keys at all.
 
 ### Step 2b: Install Tavily Agent Skills (recommended)
 

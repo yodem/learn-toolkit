@@ -286,6 +286,7 @@ To share the skill with your team, add it to your project's `.claude/skills/` di
 | Core     | Infographic | Done   | ארכיטקטורת קפקא             |
 | Core     | Mind Map    | Done   | עולם קפקא - מפת מושגים     |
 | Core     | Flashcards  | Done   | 12 כרטיסיות למידה           |
+| Core     | Study Guide | Done   | מדריך יישום קפקא            |
 ```
 
 ## Configuration
@@ -296,14 +297,13 @@ Default: **Hebrew** (`he`). Override per-invocation or edit `SKILL.md`.
 
 ### Research Backends
 
-All three run in parallel with graceful fallback:
+Tavily (MCP or CLI) and Exa are required. The workflow checks for them at startup and shows setup instructions if missing:
 
 | Available | Behavior |
 |-----------|----------|
-| Tavily + Exa + WebSearch | Full coverage (best) |
-| Tavily + WebSearch | Tavily primary |
-| Exa + WebSearch | Exa primary |
-| WebSearch only | Built-in only (reduced depth) |
+| Tavily MCP + Exa | Full coverage via MCP (best) |
+| Tavily CLI + Exa | CLI for Tavily, MCP for Exa |
+| Missing Tavily or Exa | Workflow stops with setup instructions |
 
 ### Artifact Types
 
@@ -338,10 +338,7 @@ claude-learn-workflow/
 │       └── references/
 │           ├── notebooklm-loading.md         # Notebook overflow logic
 │           └── artifact-generation.md        # NotebookLM tool signatures
-├── commands/
-│   └── learn.md                              # Legacy command (standalone fallback)
-└── examples/
-    └── settings-snippet.json                 # MCP config template for manual setup
+└── .gitignore
 ```
 
 ## License
