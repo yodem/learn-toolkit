@@ -321,15 +321,6 @@ Default: podcast + infographic + mind map + flashcards + **study guide** (implem
 
 ```
 claude-learn-workflow/
-├── .agents/
-│   └── skills/                               # Tavily agent skills (recommended, via npx skills add)
-│       ├── tavily-search/                    # Web search
-│       ├── tavily-extract/                   # URL content extraction
-│       ├── tavily-crawl/                     # Site crawling
-│       ├── tavily-map/                       # URL discovery
-│       ├── tavily-research/                  # Deep research
-│       ├── tavily-cli/                       # CLI reference
-│       └── tavily-best-practices/            # Integration guidance
 ├── .claude-plugin/
 │   ├── plugin.json                           # Plugin manifest (name, version, metadata)
 │   └── marketplace.json                      # Marketplace catalog for /plugin install
