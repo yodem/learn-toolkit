@@ -7,9 +7,9 @@
   "plugins": [
     {
       "name": "learn-toolkit",
-      "version": "1.4.0",
-      "description": "3-step learning toolkit: /visualize (ASCII diagrams), /playground (interactive HTML), /learn (all 3 steps + NotebookLM with study guide + Tavily CLI)",
-      "source": "./"
+      "version": "1.5.1",
+      "description": "3-step learning toolkit: /learn-toolkit:visualize (ASCII diagrams), /learn-toolkit:playground (interactive HTML), /learn-toolkit:learn (combines all 3 steps + NotebookLM + CandleKeep)",
+      "source": "./plugins/learn-toolkit"
     }
   ]
 }

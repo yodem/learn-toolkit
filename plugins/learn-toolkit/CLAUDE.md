@@ -143,4 +143,4 @@ tvly crawl "https://docs.example.com" --output-dir ./docs/
 - **NEVER ask for, display, or log API key values.** Not in chat, not in tool calls, not in file contents.
 - If a user accidentally pastes a key, warn them to rotate it immediately
 - The plugin bundles MCP configs via `.mcp.json` with `${ENV_VAR}` references — no manual settings.json editing needed
-- If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to manual skill installation using the files in `plugins/learn-toolkit/skills/`
+- If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to manual skill installation using the files in `skills/`
