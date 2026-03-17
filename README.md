@@ -1,22 +1,26 @@
-# /learn — Deep Learning Workflow for Claude Code
+# Three Steps for Learning and Visualization with Claude Code
 
-A Claude Code **skill** that chains **Tavily**, **Exa**, and **NotebookLM** into an automated learning pipeline. Give it a topic, get back a full learning package: podcast, infographic, mind map, and flashcards.
+A 3-skill toolkit for learning new technologies without leaving your workflow. Escalate from quick terminal diagrams, through interactive browser exploration, to full AI-generated learning packages.
+
+| Step | Skill | Environment | When to use |
+|------|-------|-------------|-------------|
+| 1 | `/visualize` | Terminal | Quick flowchart or architecture diagram, stay in CLI |
+| 2 | `/playground` | Browser (HTML) | Compare alternatives, explore parameters interactively |
+| 3 | `/learn` | Web / MCP | Deep learning with podcast, infographic, mind map, flashcards |
 
 ## Quick Install
 
-Paste this repo URL into Claude Code and it will set everything up for you:
+Paste this repo URL into Claude Code and it sets everything up:
 
 ```
 https://github.com/YOUR_USERNAME/claude-learn-workflow
 ```
 
-Claude reads the `CLAUDE.md` in this repo and walks you through:
-1. Installing the `/learn` skill
-2. Asking for your Tavily and Exa API keys
-3. Configuring MCP servers in your settings
-4. Setting up NotebookLM (optional)
-
-That's it. After setup, restart Claude Code and run `/learn <topic>`.
+Claude reads the `CLAUDE.md` and:
+1. Installs all 3 skills (`/visualize`, `/playground`, `/learn`)
+2. `/visualize` and `/playground` work immediately — no API keys needed
+3. Asks for Tavily/Exa keys for `/learn` (optional — falls back to built-in search)
+4. Configures MCP servers and sets up NotebookLM (optional)
 
 > Works with any AI coding assistant that reads `CLAUDE.md` — Claude Code, Cursor, Windsurf, etc.
 
@@ -76,11 +80,57 @@ claude
 
 </details>
 
-## How It Works
+## The Three Skills
+
+### Step 1: `/visualize` — ASCII Diagrams in Terminal
+
+```
+/visualize <concept>
+```
+
+Generates flowcharts, architecture diagrams, sequence diagrams, decision trees, and comparison tables directly in the terminal using Unicode box-drawing characters. No files created, no browser needed.
+
+```
+/visualize user login flow
+/visualize microservices with API gateway
+/visualize REST vs GraphQL vs gRPC
+```
+
+**No API keys or MCP servers required.** Works immediately after install.
+
+### Step 2: `/playground` — Interactive HTML Explorer
+
+```
+/playground <topic>
+```
+
+Generates a standalone HTML file with interactive controls (sliders, toggles, tabs) for exploring parameters, comparing alternatives, and making decisions. Opens in your default browser.
+
+```
+/playground PostgreSQL vs MongoDB vs Redis
+/playground REST API pagination strategies
+/playground monolith vs microservices for team of 5
+```
+
+**No API keys or MCP servers required.** Works immediately after install.
+
+### Step 3: `/learn` — Deep Learning Package via NotebookLM
 
 ```
 /learn <topic>
 ```
+
+Researches a topic across Tavily, Exa, and web search in parallel, loads everything into NotebookLM, and generates a full learning package.
+
+```
+/learn Kafka event streaming
+/learn Rust ownership and borrowing
+/learn Next.js App Router --language en
+```
+
+**Requires API keys** for Tavily/Exa (optional — falls back to WebSearch) and NotebookLM MCP (optional — skips artifact generation without it).
+
+#### /learn Pipeline
 
 ```
 Phase 1: Research (parallel)          Phase 2: Organize
@@ -93,20 +143,9 @@ Phase 3: NotebookLM                   Phase 4: Generate (parallel)
   ├── Add URLs as sources        ->     ├── Bento-grid infographic
   ├── Add research summary       ->     ├── Mind map
   └── Overflow -> new notebook   ->     └── Flashcards
-
-Phase 5: Poll & Report
-  └── Final summary table with notebook links and artifact status
 ```
 
-### Source Overflow Handling
-
-NotebookLM allows up to **50 sources per notebook**. When the limit is reached, the workflow automatically creates additional notebooks:
-
-| Notebook | Contents |
-|----------|----------|
-| `[Topic] - Core Learning` | Official docs, tutorials, main articles |
-| `[Topic] - Deep Dive` | Code examples, comparisons, advanced content |
-| `[Topic] - Community` | Blog posts, discussions, alternatives |
+NotebookLM allows up to **50 sources per notebook**. Overflow automatically creates additional notebooks.
 
 ## Advanced Setup Options
 
@@ -216,39 +255,24 @@ Default: podcast + infographic + mind map + flashcards. Additional types availab
 
 ```
 claude-learn-workflow/
+├── CLAUDE.md                                 # AI reads this for automated setup
 ├── README.md
 ├── LICENSE
 ├── skills/
+│   ├── visualize/
+│   │   └── SKILL.md                          # Step 1: ASCII diagrams
+│   ├── playground/
+│   │   └── SKILL.md                          # Step 2: Interactive HTML
 │   └── learn/
-│       ├── SKILL.md                          # Main skill (install this)
+│       ├── SKILL.md                          # Step 3: Deep learning
 │       └── references/
-│           ├── notebooklm-loading.md         # Notebook creation & overflow
-│           └── artifact-generation.md        # Tool call signatures
+│           ├── notebooklm-loading.md         # Notebook overflow logic
+│           └── artifact-generation.md        # NotebookLM tool signatures
 ├── commands/
 │   └── learn.md                              # Legacy command (alternative)
 └── examples/
     └── settings-snippet.json                 # MCP config template
 ```
-
-### Why skills over commands?
-
-| Feature | Commands (`~/.claude/commands/`) | Skills (`~/.claude/skills/`) |
-|---------|----------------------------------|------------------------------|
-| YAML frontmatter | No | Yes (name, description, triggers) |
-| Auto-discovery | By name only | By description + trigger patterns |
-| Progressive disclosure | Flat file | SKILL.md + references/ directory |
-| Precedence | Lower | Higher (skills win on name collision) |
-| Monorepo support | No | Yes (nested `.claude/skills/` dirs) |
-
-## Context: The 3-Step Learning Framework
-
-This tool implements **Step 3** of a developer learning framework:
-
-| Step | Tool | Environment | When to Use |
-|------|------|-------------|-------------|
-| 1 | ASCII Visualizer | Terminal | Quick concept, stay in CLI |
-| 2 | Playground (HTML) | Browser | Compare alternatives, interactive |
-| **3** | **NotebookLM + /learn** | **Web / MCP** | **Deep learning, new tech, team materials** |
 
 ## License
 
