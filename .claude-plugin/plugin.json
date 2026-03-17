@@ -1,6 +1,6 @@
 {
   "name": "learn-toolkit",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "3-step learning toolkit: /learn-toolkit:visualize (ASCII diagrams), /learn-toolkit:playground (interactive HTML), /learn-toolkit:learn (combines all 3 steps + NotebookLM + CandleKeep). Tavily agent skills integration for search, extract, crawl, research via CLI.",
   "author": {
     "name": "Yotam Fromm",
@@ -9,5 +9,6 @@
   "homepage": "https://github.com/yodem/learn-toolkit",
   "repository": "https://github.com/yodem/learn-toolkit",
   "license": "MIT",
-  "keywords": ["learning", "visualization", "notebooklm", "tavily", "exa", "podcast", "flashcards", "ascii", "playground"]
+  "keywords": ["learning", "visualization", "notebooklm", "tavily", "exa", "podcast", "flashcards", "ascii", "playground"],
+  "skills": "./skills/"
 }
