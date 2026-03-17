@@ -19,8 +19,9 @@ https://github.com/YOUR_USERNAME/claude-learn-workflow
 Claude reads the `CLAUDE.md` and:
 1. Installs all 3 skills (`/visualize`, `/playground`, `/learn`)
 2. `/visualize` and `/playground` work immediately — no API keys needed
-3. Asks for Tavily/Exa keys for `/learn` (optional — falls back to built-in search)
-4. Configures MCP servers and sets up NotebookLM (optional)
+3. Configures MCP servers with `${ENV_VAR}` references (no secrets in config files)
+4. Guides you to add API keys to your shell profile (you do this step yourself)
+5. Sets up NotebookLM (optional)
 
 > Works with any AI coding assistant that reads `CLAUDE.md` — Claude Code, Cursor, Windsurf, etc.
 
@@ -47,22 +48,31 @@ cp skills/learn/references/*.md ~/.claude/skills/learn/references/
 
 ### Step 2: Configure MCP servers
 
-Add to `~/.claude/settings.json` under `"mcpServers"`:
+Add to `~/.claude/settings.json` under `"mcpServers"` — note the `${VAR}` references, not literal keys:
 
 ```json
 {
   "mcpServers": {
     "tavily": {
       "type": "url",
-      "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=YOUR_TAVILY_API_KEY"
+      "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY}"
     },
     "exa": {
       "type": "url",
-      "url": "https://mcp.exa.ai/mcp?exaApiKey=YOUR_EXA_API_KEY&tools=web_search_exa,web_search_advanced_exa,get_code_context_exa,crawling_exa,company_research_exa,people_search_exa,deep_researcher_start,deep_researcher_check"
+      "url": "https://mcp.exa.ai/mcp?exaApiKey=${EXA_API_KEY}&tools=web_search_exa,web_search_advanced_exa,get_code_context_exa,crawling_exa,company_research_exa,people_search_exa,deep_researcher_start,deep_researcher_check"
     }
   }
 }
 ```
+
+Then add your actual keys to your shell profile (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+export TAVILY_API_KEY="tvly-your-key-here"
+export EXA_API_KEY="your-exa-key-here"
+```
+
+This way your config file contains no secrets and can be safely shared or committed.
 
 ### Step 3: Install NotebookLM MCP (optional)
 
@@ -162,9 +172,9 @@ NotebookLM allows up to **50 sources per notebook**. Overflow automatically crea
 
 When servers share the same name across scopes, local wins over project, project wins over user.
 
-### Environment Variable Support
+### Security: API keys via environment variables
 
-`.mcp.json` supports `${VAR}` and `${VAR:-default}` syntax so you can commit configs without hardcoding secrets:
+API keys are **never stored in config files**. Both `settings.json` and `.mcp.json` support `${VAR}` and `${VAR:-default}` syntax — the actual key is resolved at runtime from your shell environment:
 
 ```json
 {
@@ -176,6 +186,11 @@ When servers share the same name across scopes, local wins over project, project
   }
 }
 ```
+
+Keys live in your shell profile (`~/.zshrc` / `~/.bashrc`) where they're standard for CLI dev tools. This means:
+- Config files contain no secrets and can be safely shared/committed
+- Keys are easy to rotate (change the env var, restart Claude Code)
+- No keys appear in conversation history or AI tool logs
 
 ### Team Sharing
 
