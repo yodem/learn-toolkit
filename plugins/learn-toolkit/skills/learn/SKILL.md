@@ -286,19 +286,11 @@ Output the diagram inline (same as `/learn-toolkit:visualize` would produce). Us
 
 #### Step 6b: Interactive Playground (`/learn-toolkit:playground`)
 
-Generate a standalone HTML playground file to `/tmp/playground-<topic-slug>.html` and open it in the browser. Use the research data from Phase 1-2 to populate it with accurate content.
+**Do NOT generate the HTML yourself.** Delegate to the `playground:playground` skill, passing the research summary as context.
 
-Pick the most appropriate playground type:
-- Multiple technologies/tools → side-by-side comparison with weighted scoring
-- Configuration-heavy topic → parameter explorer with sliders/toggles
-- Architecture decisions → decision matrix
-- Process topic → interactive flow explorer
+Invoke: `Skill(skill="playground:playground", args="<topic> — based on this research summary: <paste the 500-word research summary from Phase 2>")`
 
-Design: dark theme (`#1a1a2e`), accent `#6c5ce7`, monospace for data, responsive, no external deps.
-
-```bash
-open /tmp/playground-<topic-slug>.html  # macOS
-```
+The playground skill will generate the interactive HTML file and open it in the browser. Let it handle all HTML creation, styling, and file output.
 
 #### Final Output
 
@@ -336,7 +328,21 @@ Research saved to: /tmp/learn-<topic-slug>/
 - Total unique sources: X
 ```
 
-**Verification gate:** All three steps produced output: ASCII diagram rendered, HTML file exists and opened, NotebookLM artifacts complete.
+**Verification gate:** All three steps produced output: ASCII diagram rendered, playground skill invoked and HTML opened, NotebookLM artifacts complete.
+
+### Phase 7: Offer to Save Research Summary
+
+After presenting the final summary, ask the user:
+
+> **Would you like to keep the research summary?**
+> I can save it with a proper name (e.g., `[Topic]-research-summary.md`) and add it as a source to your NotebookLM notebook.
+
+If the user says yes:
+1. Rename `/tmp/learn-<topic-slug>/research-summary.md` to a descriptive name (e.g., `[Topic]-Research-Summary-[YYYY-MM-DD].md`) and copy it to the current working directory
+2. If `HAS_NOTEBOOKLM = true`, add the summary as a text source to the notebook: `mcp__notebooklm-mcp__source_add(notebook_id=<id>, source_type="text", text=<summary content>)`
+3. Report the saved file path and notebook addition status
+
+If the user declines, skip this phase.
 
 ## Examples
 
