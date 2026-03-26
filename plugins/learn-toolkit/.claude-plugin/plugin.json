@@ -1,6 +1,6 @@
 {
   "name": "learn-toolkit",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "3-step learning toolkit: /learn-toolkit:visualize (ASCII diagrams), /learn-toolkit:playground (interactive HTML), /learn-toolkit:learn (combines all 3 steps + NotebookLM + CandleKeep). Tavily agent skills integration for search, extract, crawl, research via CLI.",
   "author": {
     "name": "Yotam Fromm",

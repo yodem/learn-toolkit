@@ -166,17 +166,21 @@ If both MCP and skills are available, use MCP for search and `tvly` CLI for extr
 4. Write a 500-word research summary synthesizing key findings from search result snippets, any fetched content, and CandleKeep library content
 5. Save state (substitute `$TOPIC_SLUG` with the actual slug — topic lowercased, spaces to hyphens, special chars removed):
 ```bash
-echo "{\"topic\":\"$ARGUMENTS\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"local_path\":\"/tmp/learn-$TOPIC_SLUG/\"}" > /tmp/learn-workflow-state.json
+echo "{\"topic\":\"$ARGUMENTS\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > /tmp/learn-workflow-state.json
 ```
 
 **Verification gate:** State file written successfully. Research summary covers at least 3 distinct subtopics. If not, return to Phase 1 with refined queries.
 
 ### Phase 2.5: Save Local MD Files
 
-Always runs (not CandleKeep-specific). Save all research to `/tmp/learn-<topic-slug>/`:
+Always runs (not CandleKeep-specific). Save all research to `~/dev/learn-research/learn-<topic-slug>/`. Create the directory if it doesn't exist:
+
+```bash
+mkdir -p "$HOME/dev/learn-research/learn-<topic-slug>"
+```
 
 ```
-/tmp/learn-<topic-slug>/
+~/dev/learn-research/learn-<topic-slug>/
   README.md              — index with TOC, metadata, date
   research-summary.md    — 500-word synthesis
   sources/
@@ -190,7 +194,7 @@ Each source file contains: URL/source identifier, title, backend that provided i
 
 Consult `${CLAUDE_SKILL_DIR}/references/candlekeep-integration.md` for file structure details.
 
-Report path to user: `"Research saved to /tmp/learn-<topic-slug>/"`
+Report path to user: `"Research saved to ~/dev/learn-research/learn-<topic-slug>/"`
 
 Note: If `--ck-write` is set, `book.md` will be added to this directory later in Phase 5.5.
 
@@ -259,15 +263,15 @@ Present final summary to user:
 
 Consult `${CLAUDE_SKILL_DIR}/references/candlekeep-integration.md` for book compilation template and `ck` command patterns.
 
-1. Compile book from all research into `/tmp/learn-<topic-slug>/book.md` — includes executive summary, 3-5 chapters adapted to the topic, and source index appendix
+1. Compile book from all research into `~/dev/learn-research/learn-<topic-slug>/book.md` — includes executive summary, 3-5 chapters adapted to the topic, and source index appendix
 2. `ck items create "[Topic] - Research Compendium" --description "Auto-generated research compendium on [Topic]. Created by learn-toolkit on [date]." --no-session`
-3. `ck items put <id> --file /tmp/learn-<topic-slug>/book.md --no-session`
+3. `ck items put <id> --file ~/dev/learn-research/learn-<topic-slug>/book.md --no-session`
 4. Update state file with `candlekeep.write_id`
 5. Report: `"Research book uploaded to CandleKeep (item #ID)"`
 
-If `ck items create` or `ck items put` fails, warn user and continue — the compiled `book.md` is still available in `/tmp`.
+If `ck items create` or `ck items put` fails, warn user and continue — the compiled `book.md` is still available in `~/dev/learn-research/`.
 
-**Verification gate:** Book file exists at `/tmp/learn-<topic-slug>/book.md`. If `--ck-write` was set, CandleKeep item was created (or failure was reported).
+**Verification gate:** Book file exists at `~/dev/learn-research/learn-<topic-slug>/book.md`. If `--ck-write` was set, CandleKeep item was created (or failure was reported).
 
 ### Phase 6: Generate Companion Visualizations (3-Step Integration)
 
@@ -303,7 +307,7 @@ Present the complete learning package:
 [ASCII diagram rendered above]
 
 ### Step 2: Interactive Explorer (Browser)
-File: /tmp/playground-<topic-slug>.html (opened in browser)
+File: ~/dev/learn-research/playground-<topic-slug>.html (opened in browser)
 
 ### Step 3: Deep Learning (NotebookLM)
 | # | Notebook | Sources | Link |
@@ -321,7 +325,7 @@ File: /tmp/playground-<topic-slug>.html (opened in browser)
 (Omit this section entirely if HAS_CANDLEKEEP = false)
 
 ### Local Files
-Research saved to: /tmp/learn-<topic-slug>/
+Research saved to: ~/dev/learn-research/learn-<topic-slug>/
 
 ### Research Summary
 - X official docs, X library sources, X tutorials, X articles, X repos
@@ -338,7 +342,7 @@ After presenting the final summary, ask the user:
 > I can save it with a proper name (e.g., `[Topic]-research-summary.md`) and add it as a source to your NotebookLM notebook.
 
 If the user says yes:
-1. Rename `/tmp/learn-<topic-slug>/research-summary.md` to a descriptive name (e.g., `[Topic]-Research-Summary-[YYYY-MM-DD].md`) and copy it to the current working directory
+1. Copy `~/dev/learn-research/learn-<topic-slug>/research-summary.md` to the current working directory with a descriptive name (e.g., `[Topic]-Research-Summary-[YYYY-MM-DD].md`)
 2. If `HAS_NOTEBOOKLM = true`, add the summary as a text source to the notebook: `mcp__notebooklm-mcp__source_add(notebook_id=<id>, source_type="text", text=<summary content>)`
 3. Report the saved file path and notebook addition status
 
