@@ -4,3 +4,5 @@
 skills-lock.json
 /tmp/
 *.env
+.academic-helper/
+.academic-writer/

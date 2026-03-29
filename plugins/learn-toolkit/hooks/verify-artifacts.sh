@@ -31,7 +31,7 @@ if [[ -n "$LOCAL_PATH" && ! -d "$LOCAL_PATH" ]]; then
 fi
 
 # Check minimum: research-summary.md should exist
-if [[ -n "$LOCAL_PATH" && ! -f "${LOCAL_PATH}research-summary.md" ]]; then
+if [[ -n "$LOCAL_PATH" && ! -f "${LOCAL_PATH}/research-summary.md" ]]; then
   echo "WARNING: learn-toolkit ran for topic '$TOPIC' but research-summary.md was not generated." >&2
 fi
 
