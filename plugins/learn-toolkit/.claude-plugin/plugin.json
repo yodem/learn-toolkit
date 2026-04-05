@@ -11,7 +11,6 @@
   "license": "MIT",
   "keywords": ["learning", "visualization", "notebooklm", "tavily", "exa", "podcast", "flashcards", "ascii", "playground"],
   "skills": "./skills/",
-  "hooks": "./hooks/",
   "mcp": "../.mcp.json",
   "requiredEnvVars": [
     {
