@@ -406,8 +406,7 @@ indefinitely or produces a false stale-state warning.
    the notebook package. Research, local files and the CandleKeep offer are
    unaffected." No notebook/artifact tables in the final report.
 7. Phase 6a: ASCII diagram of the sugya structure. Phase 6b: skipped (judaism says no).
-8. Phase 7: offers to file into CandleKeep; never writes to or links into
-   `~/dev/sefaria/sefaria-wiki`.
+8. Phase 7: offers to file findings into a CandleKeep field-research book.
 
 ### Example 3 — philosophy, degraded search
 

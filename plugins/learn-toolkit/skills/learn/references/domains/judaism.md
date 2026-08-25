@@ -33,15 +33,6 @@ Exa — describe the ideal page:
 - GOOD: `"academic article on the reception history of <text> among medieval commentators"`
 - BAD: `"<text> commentary history"`
 
-## Wiki Boundary — MANDATORY
-
-Using Sefaria MCP *text* tools for personal study is expected and fine. The separation rule
-governs **where notes are filed**, not which tools are called.
-
-- Findings go to `$HOME/dev/learn-research/` and, on acceptance, to CandleKeep.
-- **Never** write to `~/dev/sefaria/sefaria-wiki`.
-- **Never** emit a wikilink pointing into the Sefaria wiki.
-
 ## Output Settings
 
 - Language: `he`
