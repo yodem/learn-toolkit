@@ -255,6 +255,30 @@ learn-toolkit/                                 # Plugin root (plugins/learn-tool
             └── candlekeep-integration.md       # CandleKeep read/write reference
 ```
 
+## Development
+
+Run `bash scripts/lint-skill.sh` from the plugin root before committing any change to
+`skills/learn/SKILL.md` or its references — it derives everything from the files at
+runtime, so it stays meaningful as the skill evolves. It checks:
+
+1. **Undefined variables** — every `$VAR` used in `SKILL.md` is assigned or derived
+   somewhere in the file, aside from a small whitelist of real environment variables.
+2. **Body commands vs. `allowed-tools`** — every shell command the skill body instructs
+   the agent to run is actually covered by the frontmatter's `allowed-tools`.
+3. **Count-vs-enumeration drift** — a stated count ("the five keys") matches the size of
+   the list, JSON object, or comma list right next to it.
+4. **Cross-file Exa tool-name agreement** — every `*_exa` tool named in prose across the
+   skill, its domain references, and the READMEs is actually enabled in `.mcp.json`.
+5. **Deprecated tool names** — `crawling_exa`, `deep_researcher_start`, and
+   `deep_researcher_check` appear nowhere except on a line that also says why not to use
+   them.
+6. **Referenced files exist** — every `references/*.md` path `SKILL.md` points to is
+   actually present on disk.
+7. **Phase numbering** — `### Phase N` headings in `SKILL.md` are non-decreasing, with no
+   duplicates or out-of-order phases.
+
+Exits 0 on a clean run, 1 with a `FAIL: <check> — <detail>` line per finding otherwise.
+
 ## License
 
 MIT
