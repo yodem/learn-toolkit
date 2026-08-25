@@ -16,16 +16,18 @@ Or via CLI:
 claude plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
-This installs all 3 skills and configures MCP servers automatically:
-- `/learn-toolkit:visualize` — ASCII diagrams in terminal (no config needed)
-- `/learn-toolkit:playground` — Interactive HTML explorer (no config needed)
-- `/learn-toolkit:learn` — Tavily + Exa research into NotebookLM packages, with optional CandleKeep library integration
+This installs the plugin's one skill and configures MCP servers automatically:
+- `/learn-toolkit:learn <subject>` — domain-aware deep research (Tavily + Exa, plus
+  Sefaria for `judaism`) into a NotebookLM learning package (podcast, infographic, mind
+  map, flashcards, study guide), with optional CandleKeep library integration.
 
-### Step 2: Set up API keys for /learn (optional)
+### Step 2: Set up API keys for /learn (optional but recommended)
 
-The `/learn-toolkit:visualize` and `/learn-toolkit:playground` skills work immediately with no API keys.
-
-For `/learn-toolkit:learn`, the plugin's `.mcp.json` configures Tavily and Exa servers using environment variable references (`${TAVILY_API_KEY}`, `${EXA_API_KEY}`). The user needs to set these in their shell profile.
+The plugin's `.mcp.json` configures Tavily and Exa servers using environment variable
+references (`${TAVILY_API_KEY}`, `${EXA_API_KEY}`). The user needs to set these in their
+shell profile. The workflow needs **at least one** of Tavily or Exa to run at all — that
+is the only hard stop in the whole workflow; everything else (Sefaria, CandleKeep,
+NotebookLM) degrades gracefully when absent.
 
 **SECURITY: NEVER ask the user to paste API keys in the chat.**
 
@@ -53,7 +55,9 @@ Then run `source ~/.zshrc` (or `~/.bashrc`) and restart Claude Code.
 
 ---
 
-If the user doesn't have API keys, `/learn-toolkit:learn` will detect the missing backends at startup and show setup instructions. `/learn-toolkit:visualize` and `/learn-toolkit:playground` work with no keys at all.
+If the user doesn't have API keys and skips this step entirely, `/learn-toolkit:learn`
+will detect the missing backends at Phase 0 and show setup instructions instead of
+running.
 
 ### Step 2b: Install Tavily Agent Skills (recommended)
 
@@ -69,30 +73,50 @@ tvly login
 
 The `tvly login` command opens a browser for OAuth, or use `tvly login --api-key` with the same key from Step 2.
 
-This installs 7 skills:
+**Check auth with `tvly auth`, not `tvly --status`** — the latter prints a two-part
+banner whose auth line is lost when piped, giving a false negative. `/learn-toolkit:learn`
+itself checks with `tvly auth` for exactly this reason:
+
+```bash
+tvly auth
+```
+
+This installs 8 skills:
 - `/tavily-search` — LLM-optimized web search
 - `/tavily-extract` — Extract content from URLs
 - `/tavily-crawl` — Crawl websites to local markdown
 - `/tavily-map` — Discover URLs on a domain
 - `/tavily-research` — AI-synthesized deep research with citations
+- `/tavily-dynamic-search` — Programmatic search with context isolation
 - `/tavily-cli` — Unified CLI reference
 - `/tavily-best-practices` — Integration guidance
 
-**How it works with `/learn-toolkit:learn`:** The learn workflow auto-detects whether Tavily MCP or the Tavily CLI is available. If MCP is configured, it uses MCP for search and Tavily skills for extract/crawl. If only the CLI is installed, it uses the skills for everything. Either way, the user gets full Tavily coverage.
+**How it works with `/learn-toolkit:learn`:** the workflow auto-detects whether Tavily MCP or the Tavily CLI is available. If MCP is configured, it uses MCP for search. If only the CLI is installed, it uses the CLI (piped through a filter so raw HTML never enters context) for everything. Either way, the user gets full Tavily coverage.
 
-### Step 3: NotebookLM (optional)
+### Step 3: NotebookLM (fully optional)
 
-If the user wants podcast/infographic generation:
+If the user wants podcast/infographic/mind-map/flashcard generation:
 - Check if they have `notebooklm-mcp` installed
-- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic — it just won't generate podcasts, infographics, and flashcards. Add it later from https://github.com/nicholasgriffintn/notebooklm-mcp"
+- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic, save it locally, and offer the CandleKeep write — it just won't generate a podcast, infographic, mind map, flashcards, or study guide. Add it later from https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time to skip it deliberately."
+
+When NotebookLM is absent, or when the user passes `--no-notebook`, the workflow's Phase
+3-5 (notebook creation + artifact generation) skip together as one unit. Research, local
+file output, and the CandleKeep offer are unaffected — NotebookLM is never a blocker.
 
 ### Step 3b: CandleKeep (optional)
 
-If the user has `candlekeep-cloud` installed (with the `ck` CLI available), `/learn-toolkit:learn` will automatically:
-- **Read** from their CandleKeep library for existing knowledge on the topic (on by default, disable with `--no-ck-read`)
-- **Write** a compiled research book back to CandleKeep (off by default, enable with `--ck-write`)
+If the user has `candlekeep-cloud` installed (with the `ck` CLI available),
+`/learn-toolkit:learn` will automatically:
+- **Scan the library** for existing documents on the topic before researching — this
+  runs unconditionally on every domain, with no flag to disable it.
+- **Offer to write** a compiled field-research entry back to CandleKeep at the end of the
+  run — this is an interactive yes/no question at Phase 7, not a flag. It appends to a
+  per-topic `Field Research — <Topic>` book; declining writes nothing.
 
-CandleKeep is never required — the workflow skips it silently if `ck` is not installed.
+Neither behavior above is flag-gated in this version — the old read/write flags from
+earlier releases are gone; the scan is now always-on and the write is always an
+interactive prompt. CandleKeep is never required — the workflow skips both the scan and
+the offer silently if `ck` is not installed.
 
 ### Step 4: Confirm
 
@@ -102,23 +126,36 @@ Tell the user:
 
 Plugin **learn-toolkit** installed. Here's what you have:
 
-| Skill | Command | Ready? |
-|-------|---------|--------|
-| ASCII Visualizer | `/learn-toolkit:visualize <concept>` | Yes |
-| Interactive Playground | `/learn-toolkit:playground <topic>` | Yes |
-| Deep Learning | `/learn-toolkit:learn <topic>` | After setting env vars + restart |
-| CandleKeep (optional) | `--ck-write` to save, `--no-ck-read` to skip | If `ck` CLI installed |
-| Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI | After Step 2b (`npx skills add` + `tvly login`) |
-
-**Try now (no restart needed):**
-```
-/learn-toolkit:visualize microservices architecture
-/learn-toolkit:playground React vs Vue vs Svelte
-```
+| Command | Ready? |
+|---------|--------|
+| `/learn-toolkit:learn <subject>` | After setting env vars + restart (at least one of Tavily/Exa) |
+| CandleKeep (optional) | Automatic library scan + end-of-run write offer, if `ck` CLI installed |
+| NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
+| Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`npx skills add` + `tvly login`) |
 
 **After env vars + restart:**
 ```
 /learn-toolkit:learn Kafka event streaming
+```
+
+The domain (`tech`, `philosophy`, or `judaism`) is inferred from the subject and
+announced before any research runs — override it with `--domain`:
+
+```
+/learn-toolkit:learn hilchot shabbat candle lighting --domain judaism
+```
+
+Default language follows the resolved domain (`tech` → `en`; `philosophy`/`judaism` →
+`he`) — override with `--language <code>`:
+
+```
+/learn-toolkit:learn Rust ownership and borrowing --language en
+```
+
+Skip the NotebookLM package for a given run:
+
+```
+/learn-toolkit:learn Next.js App Router --no-notebook
 ```
 
 **After Tavily skills install (Step 2b):**
@@ -127,14 +164,6 @@ Plugin **learn-toolkit** installed. Here's what you have:
 /tavily-research "RAG architecture patterns"
 tvly crawl "https://docs.example.com" --output-dir ./docs/
 ```
-
-**When to use which:**
-- Quick concept, stay in terminal -> `/learn-toolkit:visualize`
-- Compare options, explore interactively -> `/learn-toolkit:playground`
-- Deep dive, new technology, team materials -> `/learn-toolkit:learn`
-- Deep dive + save to library -> `/learn-toolkit:learn <topic> --ck-write`
-- Direct web search/extract/crawl -> `/tavily-search`, `/tavily-extract`, `/tavily-crawl`
-- Comprehensive research with citations -> `/tavily-research`
 
 ---
 
