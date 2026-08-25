@@ -5,16 +5,18 @@ The language is the resolved domain language from Phase 0.5 — `en` for `tech`,
 The signatures below show `language=<resolved domain language>` as a placeholder for that
 value.
 
-Each artifact's `focus_prompt` should also follow the domain's `## Output Settings` →
+Each artifact's `focus_prompt` MUST follow the domain's `## Output Settings` →
 NotebookLM artifact focus line: implementation-oriented (code examples, pitfalls, action
 items) for `tech`; argument structure (positions, objections, replies) for `philosophy`;
 text-and-commentary (sugya structure, commentators' positions, practical halakhic upshot)
-for `judaism`. The `focus_prompt` text shown below is the `tech` framing as a worked
-example — substitute the resolved domain's focus before calling `studio_create`.
+for `judaism`. Do not always send the `tech`-framed brief — that framing only fits
+`tech`. Audio Podcast and Infographic below use the same domain-adapted-brief pattern as
+the Study Guide further down this file: `focus_prompt=<domain-specific brief, see
+below>` in the call, with the actual text taken from the table underneath it.
 
 ## Tool Call Signatures
 
-### Audio Podcast
+### Audio Podcast (domain-adapted brief)
 
 ```
 mcp__notebooklm-mcp__studio_create(
@@ -23,15 +25,21 @@ mcp__notebooklm-mcp__studio_create(
   audio_format="deep_dive",
   audio_length="default",
   language=<resolved domain language>,
-  focus_prompt="Explain the core concepts of [topic], how they relate to each other, and practical applications. Cover both fundamentals and advanced patterns.",
+  focus_prompt=<domain-specific brief, see below>,
   confirm=true
 )
 ```
 
+| Domain | `focus_prompt` |
+|--------|-----------------|
+| `tech` | "Explain the core concepts of [topic], how they relate to each other, and practical applications. Cover both fundamentals and advanced patterns, with concrete code examples and common pitfalls." |
+| `philosophy` | "Discuss [topic] as a philosophical debate. Lay out the central argument(s) and the positions in play, the strongest objections raised against each, and how their proponents reply. Keep the discussion structured around the argument, not just historical background." |
+| `judaism` | "Discuss [topic] as a sugya. Walk through the structure of the text, the positions of the major commentators and where they disagree, and close with the practical halakhic upshot where relevant." |
+
 Audio formats: `deep_dive` (default), `brief`, `critique`, `debate`
 Audio lengths: `short`, `default`, `long`
 
-### Infographic
+### Infographic (domain-adapted brief)
 
 ```
 mcp__notebooklm-mcp__studio_create(
@@ -41,10 +49,16 @@ mcp__notebooklm-mcp__studio_create(
   detail_level="detailed",
   infographic_style="bento_grid",
   language=<resolved domain language>,
-  focus_prompt="Key concepts, architecture, and relationships in [topic]. Include comparison of approaches and decision criteria.",
+  focus_prompt=<domain-specific brief, see below>,
   confirm=true
 )
 ```
+
+| Domain | `focus_prompt` |
+|--------|-----------------|
+| `tech` | "Key concepts, implementation steps, and relationships in [topic]. Include a comparison of approaches, common pitfalls, and concrete action items." |
+| `philosophy` | "The structure of the argument in [topic]: central positions, the objections raised against each, and the replies made to them. Show how the positions relate to and contend with each other." |
+| `judaism` | "The structure of the sugya in [topic]: the text, the major commentators' positions, their key points of dispute, and the practical halakhic upshot." |
 
 Styles: `auto_select`, `sketch_note`, `professional`, `bento_grid`, `editorial`, `instructional`, `bricks`, `clay`, `anime`, `kawaii`, `scientific`
 Orientations: `landscape`, `portrait`, `square`

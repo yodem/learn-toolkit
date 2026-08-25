@@ -278,10 +278,11 @@ signatures.
 **Phase 4 — Generate Artifacts:** create podcast, infographic, mind map, flashcards, and
 study guide in parallel (`confirm=true` on each), all using
 `language=<resolved domain language>` from Phase 0.5 — never a hardcoded value. The
-study guide's `focus_prompt` follows the resolved domain's `## Output Settings` →
-NotebookLM artifact focus line (implementation-oriented for `tech`; argument structure
-for `philosophy`; text-and-commentary for `judaism`) — see the domain-adapted brief table
-in `artifact-generation.md`.
+podcast's, infographic's, and study guide's `focus_prompt` each follow the resolved
+domain's `## Output Settings` → NotebookLM artifact focus line (implementation-oriented
+for `tech`; argument structure for `philosophy`; text-and-commentary for `judaism`) —
+never send the `tech`-framed brief to another domain. See the domain-adapted brief
+tables in `artifact-generation.md`.
 
 **Phase 5 — Poll and Report:** poll `studio_status` every 30 seconds (max 10 polls / 5
 minutes) until every artifact is `completed` or `failed`.
@@ -341,6 +342,16 @@ If the user declines, skip without writing anything.
 
 **Verification gate:** either skipped silently (`HAS_CANDLEKEEP = false`), declined by
 the user, or a successful append confirmed by read-back.
+
+After presenting the final report to the user, delete the run's state file as the very
+last action of the workflow — this always runs, regardless of how Phase 7 resolved:
+
+```bash
+rm -f "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
+```
+
+This prevents a stale state file from surviving into a future session and producing a
+false `verify-artifacts.sh` warning for a topic that finished long ago.
 
 ## Examples
 
