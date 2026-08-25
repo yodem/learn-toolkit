@@ -1,7 +1,7 @@
 {
   "name": "learn-toolkit",
-  "version": "1.5.2",
-  "description": "3-step learning toolkit: /learn-toolkit:visualize (ASCII diagrams), /learn-toolkit:playground (interactive HTML), /learn-toolkit:learn (combines all 3 steps + NotebookLM + CandleKeep). Tavily agent skills integration for search, extract, crawl, research via CLI.",
+  "version": "2.0.0",
+  "description": "One skill, /learn <subject>, that researches a topic with domain-aware tool routing (tech, philosophy, judaism), fans research out across Tavily, Exa, Sefaria and CandleKeep, and optionally builds a NotebookLM learning package.",
   "author": {
     "name": "Yotam Fromm",
     "url": "https://github.com/yodem"
@@ -9,21 +9,6 @@
   "homepage": "https://github.com/yodem/learn-toolkit",
   "repository": "https://github.com/yodem/learn-toolkit",
   "license": "MIT",
-  "keywords": ["learning", "visualization", "notebooklm", "tavily", "exa", "podcast", "flashcards", "ascii", "playground"],
-  "skills": "./skills/",
-  "mcp": "../.mcp.json",
-  "requiredEnvVars": [
-    {
-      "name": "TAVILY_API_KEY",
-      "description": "Tavily API key for web search and content extraction. Get one free at https://tavily.com",
-      "required": false,
-      "usedBy": ["/learn-toolkit:learn"]
-    },
-    {
-      "name": "EXA_API_KEY",
-      "description": "Exa API key for semantic web search. Get one at https://exa.ai",
-      "required": false,
-      "usedBy": ["/learn-toolkit:learn"]
-    }
-  ]
+  "keywords": ["learning", "research", "notebooklm", "tavily", "exa", "candlekeep", "sefaria"],
+  "skills": "./skills/"
 }

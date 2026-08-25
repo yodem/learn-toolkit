@@ -1,3 +1,17 @@
+## Optional — skip conditions
+
+NotebookLM is **optional**. Phases 3, 4 and 5 form one unit and skip **together** when
+either is true:
+
+- NotebookLM tools were not found in Phase 0
+- `--no-notebook` was passed
+
+When skipped, emit exactly one notice — `NotebookLM not available — skipping the notebook
+package. Research, local files and the CandleKeep offer are unaffected.` — omit the notebook
+and artifact tables from the final report, and continue to Phase 6.
+
+**Never stop the workflow because NotebookLM is missing.**
+
 # NotebookLM Loading Reference
 
 ## Notebook Creation Strategy

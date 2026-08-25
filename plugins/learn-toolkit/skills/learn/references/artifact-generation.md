@@ -1,5 +1,17 @@
 # Artifact Generation Reference
 
+The language is the resolved domain language from Phase 0.5 — `en` for `tech`, `he` for
+`philosophy` and `judaism` — unless `--language <code>` overrode it. Do not hardcode `he`.
+The signatures below show `language=<resolved domain language>` as a placeholder for that
+value.
+
+Each artifact's `focus_prompt` should also follow the domain's `## Output Settings` →
+NotebookLM artifact focus line: implementation-oriented (code examples, pitfalls, action
+items) for `tech`; argument structure (positions, objections, replies) for `philosophy`;
+text-and-commentary (sugya structure, commentators' positions, practical halakhic upshot)
+for `judaism`. The `focus_prompt` text shown below is the `tech` framing as a worked
+example — substitute the resolved domain's focus before calling `studio_create`.
+
 ## Tool Call Signatures
 
 ### Audio Podcast
@@ -10,7 +22,7 @@ mcp__notebooklm-mcp__studio_create(
   artifact_type="audio",
   audio_format="deep_dive",
   audio_length="default",
-  language="he",
+  language=<resolved domain language>,
   focus_prompt="Explain the core concepts of [topic], how they relate to each other, and practical applications. Cover both fundamentals and advanced patterns.",
   confirm=true
 )
@@ -28,7 +40,7 @@ mcp__notebooklm-mcp__studio_create(
   orientation="portrait",
   detail_level="detailed",
   infographic_style="bento_grid",
-  language="he",
+  language=<resolved domain language>,
   focus_prompt="Key concepts, architecture, and relationships in [topic]. Include comparison of approaches and decision criteria.",
   confirm=true
 )
@@ -43,8 +55,8 @@ Orientations: `landscape`, `portrait`, `square`
 mcp__notebooklm-mcp__studio_create(
   notebook_id=<id>,
   artifact_type="mind_map",
-  title="[topic in Hebrew]",
-  language="he",
+  title="[topic, in the resolved domain language]",
+  language=<resolved domain language>,
   confirm=true
 )
 ```
@@ -56,7 +68,7 @@ mcp__notebooklm-mcp__studio_create(
   notebook_id=<id>,
   artifact_type="flashcards",
   difficulty="medium",
-  language="he",
+  language=<resolved domain language>,
   confirm=true
 )
 ```
@@ -73,18 +85,28 @@ mcp__notebooklm-mcp__studio_status(notebook_id=<id>)
 
 Poll every 30 seconds. Audio typically takes 2-4 minutes. Infographics take 1-2 minutes. Mind maps and flashcards are usually instant.
 
-### Study Guide (Action Items & Implementation)
+### Study Guide (domain-adapted brief)
+
+The `focus_prompt` MUST match the resolved domain's `## Output Settings` → NotebookLM
+artifact focus line. Do not always send the implementation-focused brief — that framing
+only fits `tech`.
 
 ```
 mcp__notebooklm-mcp__studio_create(
   notebook_id=<id>,
   artifact_type="report",
   report_type="Study Guide",
-  language="he",
-  focus_prompt="Create an implementation-focused study guide for [topic]. Include: 1) Key concepts summary, 2) Step-by-step implementation guide with code examples, 3) Action items checklist — what to build first, what to configure, what to test, 4) Common pitfalls and how to avoid them, 5) Recommended next steps after initial implementation.",
+  language=<resolved domain language>,
+  focus_prompt=<domain-specific brief, see below>,
   confirm=true
 )
 ```
+
+| Domain | `focus_prompt` |
+|--------|-----------------|
+| `tech` | "Create an implementation-focused study guide for [topic]. Include: 1) Key concepts summary, 2) Step-by-step implementation guide with code examples, 3) Action items checklist — what to build first, what to configure, what to test, 4) Common pitfalls and how to avoid them, 5) Recommended next steps after initial implementation." |
+| `philosophy` | "Create a study guide analyzing [topic]. Include: 1) Summary of the central argument(s), 2) Key positions and their proponents, 3) Major objections and the replies made to them, 4) How this debate connects to the broader literature, 5) Suggested further reading." |
+| `judaism` | "Create a study guide for [topic]. Include: 1) Summary of the sugya/text structure, 2) Positions of the major commentators, 3) Key points of dispute among them, 4) Practical halakhic upshot where relevant, 5) Suggested related texts for further study." |
 
 Report types: `Briefing Doc`, `Study Guide`, `Blog Post`
 
