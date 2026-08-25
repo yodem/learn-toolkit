@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "learn-toolkit",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "description": "One skill, /learn <subject>, with domain-aware research routing across Tavily, Exa, Sefaria and CandleKeep.",
       "source": "./plugins/learn-toolkit"
     }
