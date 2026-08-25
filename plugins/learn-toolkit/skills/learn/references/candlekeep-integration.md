@@ -3,9 +3,11 @@
 ## Overview
 
 CandleKeep provides bidirectional integration with the `/learn` workflow:
-- **Read** (Phase 0.5): scan the library for existing knowledge on the topic — runs on
-  **every domain, unconditionally**. There is no skip flag; the read-skipping flag from
-  the old three-skill design is gone entirely.
+- **Read** (Phase 1): the `library` subagent, dispatched as part of every domain's
+  Subagent Roster in Phase 1's fan-out, scans the library for existing knowledge on the
+  topic and returns a digest alongside every other backend's — runs on **every domain,
+  unconditionally**. There is no skip flag; the read-skipping flag from the old
+  three-skill design is gone entirely.
 - **Write** (Phase 7): offer, interactively, to append the session's findings to a
   per-topic field-research book. There is no write-enabling flag; the interactive offer
   replaces it outright.
@@ -51,10 +53,12 @@ ck --version 2>/dev/null && echo "CK_CLI=true" || echo "CK_CLI=false"
 Set `HAS_CANDLEKEEP = true/false`. Missing is not an error — just skip CandleKeep steps
 silently and continue the workflow.
 
-## Library Scan (Phase 0.5)
+## Library Scan (Phase 1, `library` subagent)
 
-**Condition:** `HAS_CANDLEKEEP = true`. That's it — this runs on every domain,
-unconditionally. There is no read-skip flag.
+**Condition:** `HAS_CANDLEKEEP = true`. That's it — the `library` subagent is part of
+every domain's Subagent Roster, so this runs on every domain, unconditionally, as one
+of the parallel subagents dispatched in Phase 1's fan-out (not a standalone Phase 0.5
+step). There is no read-skip flag.
 
 ### Step 1: List items and match by topic
 
@@ -81,23 +85,20 @@ ck items read "<item-id>:<relevant-pages>"
 
 Extract content snippets (500-1000 words per item).
 
-### Step 3: Store results
+### Step 3: Return the digest
 
-Store as `ck_sources[]`:
+Like every other Phase 1 subagent, the `library` subagent returns the shared digest
+contract (`kind: "library"`) rather than a standalone report — it does not print
+"Found X relevant documents" to the user directly. The parent context sees the findings
+folded into Phase 2's merge alongside every other backend's digests:
 
 ```json
-[
-  {
-    "id": "item-id",
-    "title": "Document Title",
-    "content_snippet": "Extracted relevant content..."
-  }
-]
+[{"url": "item-id", "title": "Document Title", "kind": "library",
+  "why_it_matters": "one sentence", "key_claims": ["...", "..."]}]
 ```
 
-Report to user:
-- Found matches: `"Found X relevant documents in CandleKeep: [titles]"`
-- No matches: `"No relevant library documents found"`
+If nothing matches, the subagent returns an empty digest array and Phase 2's merge
+simply has nothing to fold in from CandleKeep for this run.
 
 ## Source Hierarchy (Phase 2)
 

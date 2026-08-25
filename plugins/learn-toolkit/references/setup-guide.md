@@ -109,8 +109,10 @@ generation:
 
 If the user has `candlekeep-cloud` installed (with the `ck` CLI available),
 `/learn-toolkit:learn` will automatically:
-- **Scan the library** (Phase 0.5) for existing knowledge on the topic — this runs
-  unconditionally on every invocation, on every domain. There is no flag to disable it.
+- **Scan the library** via the `library` subagent, dispatched as part of Phase 1's
+  parallel research fan-out, for existing knowledge on the topic — this runs
+  unconditionally on every invocation, on every domain, returning a digest alongside
+  every other backend's rather than a standalone report. There is no flag to disable it.
 - **Offer, interactively, at the end of the run** (Phase 7) to file the session's
   findings into a per-topic CandleKeep field-research book. This is a question the
   workflow asks, not a flag — decline it and nothing is written.

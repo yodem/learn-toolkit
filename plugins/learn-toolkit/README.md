@@ -60,8 +60,10 @@ resolved domain's file in full before dispatching any research.
 2. **Phase 0.5 — Resolve domain and language,** read the domain file, announce the
    routing before spending any research call.
 3. **Phase 1 — Parallel research fan-out.** One subagent per roster entry in the
-   resolved domain, dispatched in a single message. Each subagent returns digests
-   (URL/id, title, kind, why it matters, key claims) — never raw page dumps.
+   resolved domain, dispatched in a single message — including a `library` subagent that
+   scans CandleKeep (see [CandleKeep](#candlekeep) below) unconditionally on every
+   domain. Each subagent returns digests (URL/id, title, kind, why it matters, key
+   claims) — never raw page dumps.
 4. **Phase 2 — Merge and synthesize.** Dedupe, rank by the domain's source hierarchy,
    write a ~500-word synthesis covering at least 3 subtopics.
 5. **Phase 2.5 — Save local files.** Always runs, regardless of what backends were
@@ -86,7 +88,7 @@ resolved domain's file in full before dispatching any research.
 | Tavily | One of Tavily/Exa required | General web search, official docs, community discussion | If Exa is also missing, the workflow **stops** before Phase 0.5 with setup instructions — the only hard stop in the whole workflow |
 | Exa | One of Tavily/Exa required | Code-aware search (`get_code_context_exa`), broader web search (`web_search_advanced_exa`), and — for `tech` — practitioner discussion on LinkedIn (`linkedin_search_exa`) | Same as above |
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
-| CandleKeep | Optional | Unconditional library scan (Phase 0.5) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
+| CandleKeep | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the CandleKeep offer are unaffected |
 
 ### NotebookLM is optional
@@ -123,9 +125,11 @@ multi-step deep-research tool — those are not part of this workflow.
 If the `ck` CLI is on your `PATH` (install via the `candlekeep-cloud` plugin),
 `/learn-toolkit:learn` will:
 
-- **Scan the library** (Phase 0.5) for existing documents on the topic before
-  researching — this runs unconditionally on every invocation when CandleKeep is
-  available. There is no flag to disable it.
+- **Scan the library** via the `library` subagent, one of the parallel subagents
+  dispatched in Phase 1's fan-out, for existing documents on the topic before
+  synthesizing — this runs unconditionally on every invocation when CandleKeep is
+  available, on every domain, and returns a digest like every other backend rather than
+  a standalone report. There is no flag to disable it.
 - **Offer to file findings** (Phase 7) into a per-topic field-research book, at the end
   of the run — this is an interactive question, not a flag. Decline it and nothing is
   written.

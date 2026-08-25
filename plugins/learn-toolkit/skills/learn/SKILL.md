@@ -59,10 +59,13 @@ Run these `ToolSearch` calls in parallel:
 
 1. `ToolSearch(query="+tavily search")` — look for `mcp__tavily__tavily_search` /
    `mcp__tavily__tavily_extract`.
-2. `ToolSearch(query="+exa search")` — look for `mcp__exa__web_search_advanced_exa` and
-   `mcp__exa__get_code_context_exa`. These are the only two Exa tools this workflow
-   uses; do not probe for or fall back to any other Exa crawling or multi-step research
-   tool.
+2. `ToolSearch(query="+exa search")` — look for `mcp__exa__web_search_advanced_exa`,
+   `mcp__exa__get_code_context_exa`, and `mcp__exa__linkedin_search_exa`. These are the
+   three Exa tools this workflow uses — the third only by the `tech` domain's
+   `community` subagent (see `references/domains/tech.md`); the other two domains never
+   need it. Do not probe for or fall back to any other Exa tool — specifically not
+   `crawling_exa`, `deep_researcher_start`, or `deep_researcher_check`, none of which are
+   part of this workflow.
 3. `ToolSearch(query="+sefaria text search")` — look for
    `mcp__claude_ai_Sefaria__text_search`. Only needed if the domain resolves to
    `judaism`, but cheap to check now alongside the others.
@@ -135,6 +138,11 @@ Determine `$DOMAIN`:
 Resolve `$LANGUAGE`: `--language <code>` if passed, else the domain default (`tech` →
 `en`; `philosophy`/`judaism` → `he`).
 
+Derive `$SUBJECT`: `$ARGUMENTS` with every `--flag value` pair (`--domain <x>`,
+`--language <x>`, `--no-notebook`) stripped out, leaving only the subject text. This is
+the value handed to every subagent in Phase 1 and stored as `"topic"` in the state file
+in Phase 2.
+
 Read `${CLAUDE_SKILL_DIR}/references/domains/$DOMAIN.md` in full before doing anything
 else — it defines the Phase 1 roster, Source Ranking, Query Patterns, and Output
 Settings used by every later phase.
@@ -155,14 +163,16 @@ Dispatch every subagent in the resolved domain's `## Subagent Roster` **in a sin
 message** (one `Task` call per roster entry, all in the same turn — this is a real
 fan-out, not a sequence). For each subagent, hand it:
 
-1. The subject (`$ARGUMENTS`, minus flags).
+1. The subject (`$SUBJECT`, derived in Phase 0.5).
 2. Its roster entry — role name and which backend/tools it owns, verbatim from the
    domain file.
 3. That backend's `## Query Patterns` from the same domain file — the exact query
    shapes, flags, and (for Exa) the "describe the ideal page" framing.
 4. The return contract below, reproduced in the subagent's prompt.
 
-**Return contract — every subagent returns digests, never raw pages:**
+**Return contract — every subagent returns digests, never raw pages, targeting roughly
+1,000-2,000 tokens of distilled findings total (a target to aim for, not a hard count to
+enforce):**
 
 ```json
 [{"url": "...", "title": "...", "kind": "official_docs|tutorial|discussion|library|primary_text",
@@ -170,19 +180,23 @@ fan-out, not a sequence). For each subagent, hand it:
 ```
 
 A subagent that dumps full page text or raw HTML back into the parent context has
-failed its contract — tell it explicitly to summarize, not paste.
+failed its contract — tell it explicitly to summarize, not paste. This budget is what
+keeps the orchestrator's context clean across a multi-subagent fan-out instead of
+accumulating every subagent's raw exploration.
 
 **Token-economy rules — include in every subagent's prompt:**
 
 - Tavily subagents MUST pipe `tvly --json` output through Python (the
   `tavily-dynamic-search` pattern) so raw HTML never enters context. Never call bare
   `tvly` without `--json` piped through a filter.
-- Exa subagents use exactly `mcp__exa__web_search_advanced_exa` and
-  `mcp__exa__get_code_context_exa` — no other Exa tool is part of this workflow, and a
-  subagent must not fall back to one it happens to find via its own `ToolSearch`. They
-  have no pipe to interpose, so use `highlights` first to triage every result cheaply,
-  then call `text` with an explicit `maxCharacters` only for the 3-5 keepers worth full
-  content.
+- Exa subagents use `mcp__exa__web_search_advanced_exa` and `mcp__exa__get_code_context_exa`
+  as the baseline for every domain, plus `mcp__exa__linkedin_search_exa` for the `tech`
+  domain's `community` subagent only (per its roster entry in `references/domains/tech.md`)
+  — these three are the only Exa tools this workflow uses. A subagent must not fall back to
+  `crawling_exa`, `deep_researcher_start`, `deep_researcher_check`, or any other Exa tool it
+  happens to find via its own `ToolSearch`. They have no pipe to interpose, so use
+  `highlights` first to triage every result cheaply, then call `text` with an explicit
+  `maxCharacters` only for the 3-5 keepers worth full content.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
   pull commentary chains — never substitute open-web search for the primary text.
 - CandleKeep `library` subagents follow
@@ -202,8 +216,11 @@ weakest subagent with a broadened query before proceeding.
 3. Write a synthesis of roughly 500 words (~3000 characters — the validation hook warns
    below 2500) covering at least 3 distinct subtopics, drawing only from the digests'
    `why_it_matters` and `key_claims`, not from re-fetching pages.
-4. Save the workflow state file. All five keys are required — the hook rejects the file
-   if any is missing:
+4. Save the workflow state file. The validation hook requires five keys — `topic`,
+   `domain`, `notebooks`, `total_sources`, `local_path` — and rejects the file if any is
+   missing. Also write a sixth top-level key, `candlekeep` (`read_ids`, `write_id`): the
+   hook ignores it, but Phase 7 reads and updates `candlekeep.write_id` when filing
+   findings, so it must be present from the start:
 
 ```bash
 echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
@@ -211,7 +228,7 @@ echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_so
 
 `$TOPIC_SLUG` is the subject lowercased, spaces to hyphens, special characters removed.
 
-**Verification gate:** state file written and matches the 5-key schema; synthesis covers
+**Verification gate:** state file written with the 5 hook-required keys plus `candlekeep`; synthesis covers
 ≥3 subtopics and is ≥2500 characters.
 
 ### Phase 2.5: Save Local Files
@@ -343,15 +360,11 @@ If the user declines, skip without writing anything.
 **Verification gate:** either skipped silently (`HAS_CANDLEKEEP = false`), declined by
 the user, or a successful append confirmed by read-back.
 
-After presenting the final report to the user, delete the run's state file as the very
-last action of the workflow — this always runs, regardless of how Phase 7 resolved:
-
-```bash
-rm -f "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
-```
-
-This prevents a stale state file from surviving into a future session and producing a
-false `verify-artifacts.sh` warning for a topic that finished long ago.
+The run's state file is intentionally left in place after the final report — deleting it
+is not this skill's job, and `rm` is deliberately not in `allowed-tools`. The state file
+is disposable: the plugin's `verify-artifacts.sh` Stop hook reaps any state file older
+than 12 hours automatically on a later turn, so a finished run's file never lingers
+indefinitely or produces a false stale-state warning.
 
 ## Examples
 
@@ -419,7 +432,7 @@ false `verify-artifacts.sh` warning for a topic that finished long ago.
 | Exa MCP not found | Key unset, or set after Claude Code started | If `$EXA_API_KEY` set: tell user to restart Claude Code. If unset: show Exa setup instructions. Proceed on Tavily alone if it is available |
 | Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; `secondary` subagent (Tavily/Exa) carries more weight; continue |
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
-| NotebookLM auth expired | Token expired | Run `nlm login` via Bash (timeout 120s), then retry once |
+| NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |
 | Notebook source count reaches 48 | Cap approaching | Create overflow notebook per `notebooklm-loading.md`, continue |
 | Studio artifact generation fails | NotebookLM internal error | Retry once; if it still fails, report "Failed" in the summary table |
