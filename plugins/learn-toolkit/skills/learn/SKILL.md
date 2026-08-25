@@ -1,5 +1,5 @@
 ---
-name: learn-toolkit:learn
+name: learn
 description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and CandleKeep with one subagent per backend, then optionally builds a NotebookLM package and files findings into a CandleKeep field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]"
 allowed-tools: Task, Write, Read, Bash(tvly *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
