@@ -1,6 +1,7 @@
 # Setup Instructions for AI Assistants
 
-This repository is a **Claude Code plugin**. When a user shares this repo URL, guide them through the plugin install — do NOT manually copy skill files.
+This repository is a **Claude Code plugin marketplace**. When a user shares this repo
+URL, guide them through the plugin install — do NOT manually copy skill files.
 
 ## Quick install (preferred)
 
@@ -16,16 +17,17 @@ Or via CLI:
 claude plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
-This installs all 3 skills and configures MCP servers automatically:
-- `/learn-toolkit:visualize` — ASCII diagrams in terminal (no config needed)
-- `/learn-toolkit:playground` — Interactive HTML explorer (no config needed)
-- `/learn-toolkit:learn` — Tavily + Exa research into NotebookLM packages, with optional CandleKeep library integration
+This installs the single skill and configures MCP servers automatically:
+- `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]`
+  — domain-aware deep research across Tavily, Exa, Sefaria, and CandleKeep, with an
+  optional NotebookLM learning package.
 
-### Step 2: Set up API keys for /learn (optional)
+### Step 2: Set up API keys
 
-The `/learn-toolkit:visualize` and `/learn-toolkit:playground` skills work immediately with no API keys.
-
-For `/learn-toolkit:learn`, the plugin's `.mcp.json` configures Tavily and Exa servers using environment variable references (`${TAVILY_API_KEY}`, `${EXA_API_KEY}`). The user needs to set these in their shell profile.
+The plugin's `.mcp.json` configures Tavily and Exa servers using environment variable
+references (`${TAVILY_API_KEY}`, `${EXA_API_KEY}`). The user needs to set these in their
+shell profile. At least one of Tavily or Exa must be configured — that is the only hard
+stop in the workflow.
 
 **SECURITY: NEVER ask the user to paste API keys in the chat.**
 
@@ -38,9 +40,11 @@ Then tell them:
 
 ---
 
-The plugin is installed. To enable the `/learn-toolkit:learn` search backends, add your API keys to your shell profile.
+The plugin is installed. To enable `/learn-toolkit:learn`'s search backends, add your
+API keys to your shell profile.
 
-**Open your shell profile in your editor** (`~/.zshrc` for zsh, `~/.bashrc` for bash) and add:
+**Open your shell profile in your editor** (`~/.zshrc` for zsh, `~/.bashrc` for bash) and
+add:
 
 ```bash
 export TAVILY_API_KEY="your-tavily-key-here"    # Get one free at https://tavily.com
@@ -53,46 +57,66 @@ Then run `source ~/.zshrc` (or `~/.bashrc`) and restart Claude Code.
 
 ---
 
-If the user doesn't have API keys, `/learn-toolkit:learn` will detect the missing backends at startup and show setup instructions. `/learn-toolkit:visualize` and `/learn-toolkit:playground` work with no keys at all.
+If the user doesn't have API keys for either backend, `/learn-toolkit:learn` will stop
+at Phase 0 with setup instructions for both — no other missing tool stops the workflow,
+only zero search backends.
 
-### Step 2b: Install Tavily Agent Skills (recommended)
-
-The Tavily agent skills give `/learn-toolkit:learn` a CLI-based fallback when the Tavily MCP server isn't available, and provide standalone `tvly` commands for direct web search, extraction, crawling, and research.
-
-**Install the skills and CLI:**
+### Step 2a: Verify Tavily CLI auth (if the user installs the CLI)
 
 ```bash
-npx skills add tavily-ai/skills --yes
 curl -fsSL https://cli.tavily.com/install.sh | bash
-tvly login
+tvly login    # opens browser for OAuth, or: tvly login --api-key tvly-YOUR_KEY
 ```
 
-The `tvly login` command opens a browser for OAuth, or use `tvly login --api-key` with the same key from Step 2.
+The workflow checks CLI authentication with:
 
-This installs 7 skills:
-- `/tavily-search` — LLM-optimized web search
-- `/tavily-extract` — Extract content from URLs
-- `/tavily-crawl` — Crawl websites to local markdown
-- `/tavily-map` — Discover URLs on a domain
-- `/tavily-research` — AI-synthesized deep research with citations
-- `/tavily-cli` — Unified CLI reference
-- `/tavily-best-practices` — Integration guidance
+```bash
+tvly auth
+```
 
-**How it works with `/learn-toolkit:learn`:** The learn workflow auto-detects whether Tavily MCP or the Tavily CLI is available. If MCP is configured, it uses MCP for search and Tavily skills for extract/crawl. If only the CLI is installed, it uses the skills for everything. Either way, the user gets full Tavily coverage.
+**Not** `tvly --status` — its two-part banner drops the auth line when piped through a
+filter (e.g. `head`), producing a false negative even when the user is actually logged
+in.
+
+### Step 2b: Exa tool set
+
+The bundled `.mcp.json` already enables the canonical tool set on the Exa MCP
+connection — nothing for the user to configure:
+
+```
+web_search_exa, web_search_advanced_exa, get_code_context_exa, web_fetch_exa,
+company_research_exa, people_search_exa, linkedin_search_exa, deep_search_exa
+```
+
+The workflow itself calls `web_search_advanced_exa` and `get_code_context_exa` for
+research, plus `linkedin_search_exa` for the `tech` domain's community subagent (no
+extra credentials needed beyond the Exa key). It never uses any Exa crawling tool or
+multi-step deep-research tool — do not suggest those in any config or guidance given to
+the user for this plugin.
 
 ### Step 3: NotebookLM (optional)
 
-If the user wants podcast/infographic generation:
-- Check if they have `notebooklm-mcp` installed
-- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic — it just won't generate podcasts, infographics, and flashcards. Add it later from https://github.com/nicholasgriffintn/notebooklm-mcp"
+NotebookLM is fully optional. If the user wants podcast/infographic/flashcard
+generation:
+- Check if they have `notebooklm-mcp` installed.
+- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your
+  topic, save it locally, and offer the CandleKeep write — it just skips the notebook
+  package (phases 3-5 as one unit) with a single notice. Add NotebookLM later from
+  https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time
+  to skip it deliberately."
 
 ### Step 3b: CandleKeep (optional)
 
-If the user has `candlekeep-cloud` installed (with the `ck` CLI available), `/learn-toolkit:learn` will automatically:
-- **Read** from their CandleKeep library for existing knowledge on the topic (on by default, disable with `--no-ck-read`)
-- **Write** a compiled research book back to CandleKeep (off by default, enable with `--ck-write`)
+If the user has `candlekeep-cloud` installed (with the `ck` CLI available),
+`/learn-toolkit:learn` will automatically:
+- **Scan the library** (Phase 0.5) for existing knowledge on the topic — this runs
+  unconditionally on every invocation, on every domain. There is no flag to disable it.
+- **Offer, interactively, at the end of the run** (Phase 7) to file the session's
+  findings into a per-topic CandleKeep field-research book. This is a question the
+  workflow asks, not a flag — decline it and nothing is written.
 
-CandleKeep is never required — the workflow skips it silently if `ck` is not installed.
+There is no `--ck-write` or `--no-ck-read` flag in this version. CandleKeep is never
+required — the workflow skips both phases silently if `ck` is not installed.
 
 ### Step 4: Confirm
 
@@ -100,47 +124,35 @@ Tell the user:
 
 ---
 
-Plugin **learn-toolkit** installed. Here's what you have:
+Plugin **learn-toolkit** (v2.0.0) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|
-| ASCII Visualizer | `/learn-toolkit:visualize <concept>` | Yes |
-| Interactive Playground | `/learn-toolkit:playground <topic>` | Yes |
-| Deep Learning | `/learn-toolkit:learn <topic>` | After setting env vars + restart |
-| CandleKeep (optional) | `--ck-write` to save, `--no-ck-read` to skip | If `ck` CLI installed |
-| Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI | After Step 2b (`npx skills add` + `tvly login`) |
-
-**Try now (no restart needed):**
-```
-/learn-toolkit:visualize microservices architecture
-/learn-toolkit:playground React vs Vue vs Svelte
-```
+| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook]` | After setting env vars + restart |
+| CandleKeep (optional) | Library scan + field-research offer, no flags needed | If `ck` CLI installed |
+| NotebookLM (optional) | Notebook + artifact package, or skip with `--no-notebook` | If `notebooklm-mcp` configured |
 
 **After env vars + restart:**
 ```
 /learn-toolkit:learn Kafka event streaming
+/learn-toolkit:learn hilchot shabbat candle lighting --domain judaism
+/learn-toolkit:learn the Ship of Theseus and personal identity --domain philosophy
 ```
 
-**After Tavily skills install (Step 2b):**
-```
-/tavily-search "Claude Code plugins"
-/tavily-research "RAG architecture patterns"
-tvly crawl "https://docs.example.com" --output-dir ./docs/
-```
-
-**When to use which:**
-- Quick concept, stay in terminal -> `/learn-toolkit:visualize`
-- Compare options, explore interactively -> `/learn-toolkit:playground`
-- Deep dive, new technology, team materials -> `/learn-toolkit:learn`
-- Deep dive + save to library -> `/learn-toolkit:learn <topic> --ck-write`
-- Direct web search/extract/crawl -> `/tavily-search`, `/tavily-extract`, `/tavily-crawl`
-- Comprehensive research with citations -> `/tavily-research`
+**Domain routing:** the subject is matched against `tech`, `philosophy`, and `judaism`
+automatically; override with `--domain` if the inference is wrong. Language defaults to
+`en` for `tech` and `he` for `philosophy`/`judaism`; override with `--language <code>`.
 
 ---
 
 ## Important notes for the AI assistant
 
-- **NEVER ask for, display, or log API key values.** Not in chat, not in tool calls, not in file contents.
-- If a user accidentally pastes a key, warn them to rotate it immediately
-- The plugin bundles MCP configs via `.mcp.json` with `${ENV_VAR}` references — no manual settings.json editing needed
-- If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to manual skill installation using the files in `skills/`
+- **NEVER ask for, display, or log API key values.** Not in chat, not in tool calls, not
+  in file contents.
+- If a user accidentally pastes a key, tell them to **rotate it immediately** at the
+  provider — treat it as compromised the moment it was typed.
+- The plugin bundles MCP configs via `.mcp.json` with `${ENV_VAR}` references — no
+  manual `settings.json` editing needed. Keys never appear as literal values in any
+  config file.
+- If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to
+  manual skill installation using the files in `skills/learn/`.

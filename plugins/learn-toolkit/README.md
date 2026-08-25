@@ -1,431 +1,254 @@
-# Three Steps for Learning and Visualization with Claude Code
+# learn-toolkit
 
-A 3-skill toolkit for learning new technologies without leaving your workflow. Escalate from quick terminal diagrams, through interactive browser exploration, to full AI-generated learning packages.
+A single Claude Code skill, `/learn-toolkit:learn`, for deep-diving into a subject.
+It fans research out across Tavily, Exa, Sefaria, and CandleKeep with domain-aware
+routing, synthesizes the findings, saves them locally, and optionally builds a
+NotebookLM learning package (podcast, infographic, mind map, flashcards, study guide)
+and offers to file the session into a CandleKeep field-research book.
 
-| Step | Skill | Environment | When to use |
-|------|-------|-------------|-------------|
-| 1 | `/learn-toolkit:visualize` | Terminal | Quick flowchart or architecture diagram, stay in CLI |
-| 2 | `/learn-toolkit:playground` | Browser (HTML) | Compare alternatives, explore parameters interactively |
-| 3 | `/learn-toolkit:learn` | Terminal + Browser + Web | **All 3 steps combined:** ASCII diagram + interactive playground + NotebookLM package with study guide |
+```
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]
+```
 
 ## Install
-
-### Option A: Plugin install (recommended)
 
 ```
 /plugin marketplace add yodem/learn-toolkit
 /plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
-This installs all 3 skills, configures MCP servers (via env vars), and handles updates automatically.
-
-Then add your API keys to `~/.zshrc` (or `~/.bashrc`):
+Then add your API keys to your shell profile (`~/.zshrc` or `~/.bashrc`):
 
 ```bash
 export TAVILY_API_KEY="your-key-here"   # https://tavily.com (free)
 export EXA_API_KEY="your-key-here"      # https://exa.ai
 ```
 
-Restart Claude Code. Done.
+Restart Claude Code. The plugin's `.mcp.json` picks the keys up automatically via
+`${TAVILY_API_KEY}` / `${EXA_API_KEY}` references — nothing else to configure.
 
-> `/learn-toolkit:visualize` and `/learn-toolkit:playground` work immediately — no API keys needed. Keys are only required for `/learn-toolkit:learn`'s search backends.
+The workflow needs **at least one** of Tavily or Exa to run at all; everything else
+(Sefaria, CandleKeep, NotebookLM) is optional and degrades gracefully when absent. See
+[Backends](#backends) below.
 
-### Option B: Paste repo URL
+## How it routes
 
-Paste this URL into Claude Code and it reads `CLAUDE.md` to walk you through setup:
+`/learn-toolkit:learn` resolves exactly one of three domains before doing any research:
 
-```
-https://github.com/yodem/learn-toolkit
-```
+| Domain | What it's for | Default language | Interactive playground (Phase 6b) |
+|--------|----------------|-------------------|-------------------------------------|
+| `tech` | Software, infrastructure, tooling, frameworks, protocols, AI/ML engineering — anything better answered from docs, source code, or practitioner discussion | `en` | yes |
+| `philosophy` | Philosophical concepts, arguments, thinkers, traditions — answered from argument and secondary literature, no primary Jewish text at the center | `he` | no |
+| `judaism` | Torah, Talmud, halakha, midrash, Jewish thought — whenever a primary Jewish text is the thing being studied, even under a philosophical framing | `he` | no |
 
-> Also works with Cursor, Windsurf, and other AI tools that read `CLAUDE.md`.
+**Domain resolution:** if `--domain` is passed, it always wins. Otherwise the subject is
+matched against each domain's identity description; if genuinely ambiguous, it defaults
+to `tech` and says so — correct it with `--domain` on the next run.
 
-### Option C: Manual setup
+**Language resolution:** `--language <code>` if passed, else the resolved domain's
+default from the table above. Every phase uses this resolved value — nothing is
+hardcoded.
 
-<details>
-<summary>Click to expand manual steps</summary>
+Each domain has its own subagent roster, source ranking, and query patterns (see
+`skills/learn/references/domains/{tech,philosophy,judaism}.md`) — the workflow reads the
+resolved domain's file in full before dispatching any research.
 
-See [Prerequisites](#prerequisites) below for required API keys and tools.
+## What a run does
 
-### Step 1: Install the skills
+1. **Phase 0 — Discover tools.** Checks Tavily (CLI and MCP), Exa MCP, Sefaria MCP,
+   CandleKeep CLI, and NotebookLM MCP. Reports a matrix of what's available.
+2. **Phase 0.5 — Resolve domain and language,** read the domain file, announce the
+   routing before spending any research call.
+3. **Phase 1 — Parallel research fan-out.** One subagent per roster entry in the
+   resolved domain, dispatched in a single message. Each subagent returns digests
+   (URL/id, title, kind, why it matters, key claims) — never raw page dumps.
+4. **Phase 2 — Merge and synthesize.** Dedupe, rank by the domain's source hierarchy,
+   write a ~500-word synthesis covering at least 3 subtopics.
+5. **Phase 2.5 — Save local files.** Always runs, regardless of what backends were
+   available. Output goes to `$HOME/dev/learn-research/learn-<topic-slug>/` —
+   **`/tmp` is never used** for this durable output.
+6. **Phase 3-5 — NotebookLM package (optional).** Loads sources into a notebook, then
+   generates podcast, infographic, mind map, flashcards, and a domain-adapted study
+   guide in parallel, and polls until each artifact completes. See
+   [NotebookLM is optional](#notebooklm-is-optional) below.
+7. **Phase 6 — Companion visuals.** An ASCII diagram in the terminal always runs
+   (architecture diagram, flowchart, comparison table, or mind map — whichever fits).
+   For `tech` only, an interactive HTML playground is also generated by delegating to
+   the separate `playground:playground` skill.
+8. **Phase 7 — CandleKeep field-research offer (optional).** If CandleKeep is
+   available, interactively asks whether to file today's findings into a per-topic
+   field-research book. See [CandleKeep](#backends) below.
 
-From the plugin directory (`plugins/learn-toolkit/`):
+## Backends
 
-```bash
-# All 3 skills
-mkdir -p ~/.claude/skills/learn/references ~/.claude/skills/visualize ~/.claude/skills/playground
-cp skills/learn/SKILL.md ~/.claude/skills/learn/SKILL.md
-cp skills/learn/references/*.md ~/.claude/skills/learn/references/
-cp skills/visualize/SKILL.md ~/.claude/skills/visualize/SKILL.md
-cp skills/playground/SKILL.md ~/.claude/skills/playground/SKILL.md
-```
+| Backend | Required? | What it's for | If missing |
+|---------|-----------|----------------|------------|
+| Tavily | One of Tavily/Exa required | General web search, official docs, community discussion | If Exa is also missing, the workflow **stops** before Phase 0.5 with setup instructions — the only hard stop in the whole workflow |
+| Exa | One of Tavily/Exa required | Code-aware search (`get_code_context_exa`), broader web search (`web_search_advanced_exa`), and — for `tech` — practitioner discussion on LinkedIn (`linkedin_search_exa`) | Same as above |
+| Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
+| CandleKeep | Optional | Unconditional library scan (Phase 0.5) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
+| NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the CandleKeep offer are unaffected |
 
-### Step 2: Configure MCP servers
+### NotebookLM is optional
 
-Add to `~/.claude/settings.json` under `"mcpServers"` — note the `${VAR}` references, not literal keys:
+NotebookLM is not required to get value from `/learn-toolkit:learn`. If it isn't
+configured, or you pass `--no-notebook`, phases 3, 4, and 5 skip together and the
+workflow prints exactly one notice:
 
-```json
-{
-  "mcpServers": {
-    "tavily": {
-      "type": "url",
-      "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY}"
-    },
-    "exa": {
-      "type": "url",
-      "url": "https://mcp.exa.ai/mcp?exaApiKey=${EXA_API_KEY}&tools=web_search_exa,web_search_advanced_exa,get_code_context_exa,crawling_exa,company_research_exa,people_search_exa,deep_researcher_start,deep_researcher_check"
-    }
-  }
-}
-```
+> NotebookLM not available — skipping the notebook package. Research, local files and
+> the CandleKeep offer are unaffected.
 
-Then add your actual keys to your shell profile (`~/.zshrc` or `~/.bashrc`):
+The notebook/artifact tables are simply omitted from the final report; the workflow
+never stops because of this. The **only** hard stop in the entire workflow is having
+zero available search backends (both Tavily and Exa missing).
 
-```bash
-export TAVILY_API_KEY="tvly-your-key-here"
-export EXA_API_KEY="your-exa-key-here"
-```
+### Exa tools
 
-This way your config file contains no secrets and can be safely shared or committed.
-
-### Step 3: Install NotebookLM MCP (optional)
-
-```bash
-# See https://github.com/nicholasgriffintn/notebooklm-mcp
-nlm login
-```
-
-### Step 4: Restart Claude Code
-
-```bash
-/exit
-claude
-```
-
-</details>
-
-## Tavily Agent Skills (recommended)
-
-Install Tavily's agent skills to give `/learn-toolkit:learn` a CLI-based fallback and add standalone search/extract/crawl/research capabilities:
-
-```bash
-npx skills add tavily-ai/skills --yes
-curl -fsSL https://cli.tavily.com/install.sh | bash
-tvly login    # opens browser for OAuth, or: tvly login --api-key tvly-YOUR_KEY
-```
-
-This installs 7 skills as slash commands:
-
-| Skill | Slash Command | CLI Command | Purpose |
-|-------|---------------|-------------|---------|
-| `tavily-search` | `/tavily-search` | `tvly search "query" --json` | Web search with LLM-optimized results |
-| `tavily-extract` | `/tavily-extract` | `tvly extract "url"` | Extract content from specific URLs |
-| `tavily-crawl` | `/tavily-crawl` | `tvly crawl "url" --output-dir ./docs/` | Crawl site sections to local markdown |
-| `tavily-map` | `/tavily-map` | `tvly map "url"` | Discover URLs on a domain |
-| `tavily-research` | `/tavily-research` | `tvly research "topic" --json` | Deep multi-source research with citations |
-| `tavily-cli` | `/tavily-cli` | `tvly --help` | Unified CLI reference |
-| `tavily-best-practices` | `/tavily-best-practices` | — | Integration patterns and guidance |
-
-**Workflow escalation:** search → extract → map → crawl → research
-
-**Integration with `/learn-toolkit:learn`:** The learn workflow auto-detects Tavily CLI alongside the MCP server. If MCP is available, it uses MCP for search and CLI skills for extract/crawl. If only the CLI is installed, skills handle all Tavily operations. Either path provides full Tavily coverage.
-
-## The Three Skills
-
-### Step 1: `/learn-toolkit:visualize` — ASCII Diagrams in Terminal
+The plugin's `.mcp.json` enables this tool set on the Exa MCP connection:
 
 ```
-/learn-toolkit:visualize <concept>
+web_search_exa, web_search_advanced_exa, get_code_context_exa, web_fetch_exa,
+company_research_exa, people_search_exa, linkedin_search_exa, deep_search_exa
 ```
 
-Generates flowcharts, architecture diagrams, sequence diagrams, decision trees, and comparison tables directly in the terminal using Unicode box-drawing characters. No files created, no browser needed.
+The workflow itself only actively calls `web_search_advanced_exa` and
+`get_code_context_exa` for research fan-out, plus `linkedin_search_exa` for the `tech`
+domain's community subagent (it needs no credentials beyond your Exa key — just a
+different Exa endpoint). Subagents are told explicitly not to fall back to any other Exa
+tool they happen to discover via their own tool search, including any crawling or
+multi-step deep-research tool — those are not part of this workflow.
 
-```
-/learn-toolkit:visualize user login flow
-/learn-toolkit:visualize microservices with API gateway
-/learn-toolkit:visualize REST vs GraphQL vs gRPC
-```
+### CandleKeep
 
-**No API keys or MCP servers required.** Works immediately after install.
+If the `ck` CLI is on your `PATH` (install via the `candlekeep-cloud` plugin),
+`/learn-toolkit:learn` will:
 
-### Step 2: `/learn-toolkit:playground` — Interactive HTML Explorer
+- **Scan the library** (Phase 0.5) for existing documents on the topic before
+  researching — this runs unconditionally on every invocation when CandleKeep is
+  available. There is no flag to disable it.
+- **Offer to file findings** (Phase 7) into a per-topic field-research book, at the end
+  of the run — this is an interactive question, not a flag. Decline it and nothing is
+  written.
 
-```
-/learn-toolkit:playground <topic>
-```
+There is no `--ck-write` or `--no-ck-read` flag in this version — both behaviors above
+replaced the old flag-gated design outright.
 
-Generates a standalone HTML file with interactive controls (sliders, toggles, tabs) for exploring parameters, comparing alternatives, and making decisions. Opens in your default browser.
+## Setup
 
-```
-/learn-toolkit:playground PostgreSQL vs MongoDB vs Redis
-/learn-toolkit:playground REST API pagination strategies
-/learn-toolkit:playground monolith vs microservices for team of 5
-```
+### Tavily
 
-**No API keys or MCP servers required.** Works immediately after install.
-
-### Step 3: `/learn-toolkit:learn` — Complete Learning Package (All 3 Steps)
-
-```
-/learn-toolkit:learn <topic>
-```
-
-The full learning workflow that combines all three steps. Researches a topic across Tavily and Exa in parallel, optionally reads from your CandleKeep library, then generates:
-
-1. **ASCII diagram** in the terminal (architecture, flowchart, or comparison table)
-2. **Interactive playground** in the browser (parameter explorer, decision matrix, or comparison tool)
-3. **NotebookLM package** with podcast, infographic, mind map, flashcards, and **implementation study guide**
-
-```
-/learn-toolkit:learn Kafka event streaming
-/learn-toolkit:learn Rust ownership and borrowing
-/learn-toolkit:learn Next.js App Router --language en
-```
-
-**Requires API keys** for Tavily/Exa and NotebookLM MCP (workflow stops with setup instructions if missing). **Optional:** CandleKeep (`ck` CLI) for library read/write integration.
-
-#### /learn Pipeline
-
-```
-Phase 0: Discover tools               Phase 0.5: CandleKeep scan (optional)
-  ├── Tavily MCP or CLI?         ->     ├── ck items list --json
-  ├── Exa MCP?                   ->     ├── Match titles to topic
-  ├── NotebookLM MCP?            ->     └── Read up to 3 matching items
-  └── CandleKeep CLI?
-
-Phase 1: Research (parallel)          Phase 2: Organize
-  ├── Tavily MCP or CLI          ->     ├── Deduplicate URLs
-  └── Exa (web + code search)   ->     ├── Categorize (docs > library > tutorials > articles)
-                                        └── Create research summary
-
-Phase 2.5: Save local MD files        Phase 3: NotebookLM
-  ├── /tmp/learn-<slug>/         ->     ├── Create notebook(s)
-  ├── README.md + summary        ->     ├── Add CandleKeep text sources
-  └── sources/ (by category)     ->     ├── Add URL sources
-                                        ├── Add research summary
-                                        └── Overflow -> new notebook
-
-Phase 4: Generate (parallel)          Phase 5: Poll + Report
-  ├── Hebrew podcast (deep dive) ->     └── Summary table with all artifacts
-  ├── Bento-grid infographic
-  ├── Mind map                   Phase 5.5: Write to CandleKeep (--ck-write)
-  ├── Flashcards                   ├── Compile book.md
-  └── Implementation study guide   └── ck items create + put
-
-Phase 6: 3-Step Integration
-  ├── Step 1: ASCII diagram in terminal (architecture/flow/comparison)
-  ├── Step 2: Interactive HTML playground in browser
-  └── Step 3: NotebookLM + CandleKeep + local files summary
-```
-
-NotebookLM allows up to **50 sources per notebook**. Overflow automatically creates additional notebooks.
-
-## Prerequisites
-
-The `/learn-toolkit:visualize` and `/learn-toolkit:playground` skills work immediately — no setup needed.
-
-The `/learn-toolkit:learn` skill requires three backends and supports one optional integration:
-
-### 1. Tavily (required) — Web Search
-
-Tavily provides LLM-optimized web search and content extraction.
-
-**Option A: Tavily CLI (recommended)**
+**Option A — CLI (recommended):**
 ```bash
 curl -fsSL https://cli.tavily.com/install.sh | bash
-tvly login                                        # opens browser for OAuth
+tvly login                                 # opens browser for OAuth
 # or: tvly login --api-key tvly-YOUR_KEY
 ```
+The workflow checks CLI auth with `tvly auth` (not `tvly --status`, whose two-part
+banner drops the auth line when piped).
 
-Optionally install agent skills for slash commands:
-```bash
-npx skills add tavily-ai/skills --yes
-```
+**Option B — MCP server:** `export TAVILY_API_KEY="your-key"` in your shell profile,
+then restart Claude Code. The bundled `.mcp.json` picks it up.
 
-**Option B: Tavily MCP server**
+### Exa
 
-Add `export TAVILY_API_KEY="your-key"` to `~/.zshrc` (get a free key at [tavily.com](https://tavily.com)), then restart Claude Code. The plugin's `.mcp.json` picks it up automatically.
+`export EXA_API_KEY="your-key"` in your shell profile (get a key at
+[exa.ai](https://exa.ai)), `source` it, then restart Claude Code — the Exa MCP server
+reads keys at startup.
 
-### 2. Exa (required) — Code & Documentation Search
+### Sefaria (optional, `judaism` only)
 
-Exa specializes in code-aware and documentation-focused search.
+Configured separately as an MCP server; only matters when the resolved domain is
+`judaism`. If unavailable, the `secondary` subagent (Tavily/Exa) carries more weight —
+Sefaria is never substituted with open-web search for the primary text.
 
-Add to `~/.zshrc` (get a key at [exa.ai](https://exa.ai)):
-```bash
-export EXA_API_KEY="your-exa-key-here"
-```
+### CandleKeep (optional)
 
-Then `source ~/.zshrc` and restart Claude Code.
+Install the `candlekeep-cloud` plugin so the `ck` CLI is on your `PATH`. Detected
+automatically — no configuration in this plugin.
 
-### 3. NotebookLM (required) — Learning Artifacts
+### NotebookLM (optional)
 
-NotebookLM generates podcasts, infographics, mind maps, flashcards, and study guides.
+Install [notebooklm-mcp](https://github.com/nicholasgriffintn/notebooklm-mcp), then:
 
-Install from [notebooklm-mcp](https://github.com/nicholasgriffintn/notebooklm-mcp), then authenticate:
 ```bash
 nlm login
 ```
 
-### 4. CandleKeep (optional) — Library Integration
+## API key safety
 
-CandleKeep provides bidirectional library integration. If the `ck` CLI is available, `/learn` will:
+- **Never ask for, display, or log an API key value** — not in chat, not in tool calls,
+  not in file contents.
+- If you accidentally paste a key into the chat, **rotate it immediately** at the
+  provider (Tavily, Exa, etc.) — treat it as compromised the moment it's been typed.
+- Keys live only as `${ENV_VAR}` references in `.mcp.json` (`${TAVILY_API_KEY}`,
+  `${EXA_API_KEY}`), resolved at runtime from your shell environment. The config file
+  itself never contains a literal key and is safe to commit or share.
 
-- **Read** (on by default): Scan your CandleKeep library for existing documents on the topic before researching. Disable with `--no-ck-read`
-- **Write** (off by default): Compile all research into a structured book and upload it to your library. Enable with `--ck-write`
-
-Install via the `candlekeep-cloud` Claude Code plugin. Once `ck` is on your PATH, `/learn` detects it automatically.
-
-```bash
-# Learn and save the research as a book to CandleKeep
-/learn-toolkit:learn Kafka event streaming --ck-write
-```
-
-The compiled book includes an executive summary, 3-5 topic-adapted chapters, and a source index. It's saved locally at `/tmp/learn-<topic>/book.md` regardless, but `--ck-write` also uploads it to your CandleKeep library as a permanent reference.
-
-If `ck` is not installed, CandleKeep phases are silently skipped — no errors, no interruptions.
-
-## Advanced Setup Options
-
-<details>
-<summary>MCP server scoping, env vars, and team sharing</summary>
-
-### MCP Server Scoping
-
-| Scope | Where | Use case |
-|-------|-------|----------|
-| User (recommended) | `~/.claude/settings.json` | Available in all projects |
-| Project | `.mcp.json` in project root | Shared with team via git |
-| Local | `.claude/settings.local.json` | Per-machine, gitignored |
-
-When servers share the same name across scopes, local wins over project, project wins over user.
-
-### Security: API keys via environment variables
-
-API keys are **never stored in config files**. Both `settings.json` and `.mcp.json` support `${VAR}` and `${VAR:-default}` syntax — the actual key is resolved at runtime from your shell environment:
-
-```json
-{
-  "mcpServers": {
-    "tavily": {
-      "type": "url",
-      "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY}"
-    }
-  }
-}
-```
-
-Keys live in your shell profile (`~/.zshrc` / `~/.bashrc`) where they're standard for CLI dev tools. This means:
-- Config files contain no secrets and can be safely shared/committed
-- Keys are easy to rotate (change the env var, restart Claude Code)
-- No keys appear in conversation history or AI tool logs
-
-### Team Sharing
-
-To share the skill with your team, add it to your project's `.claude/skills/` directory and commit to git. Team members get the skill automatically without any setup.
-
-</details>
-
-## Usage
+## Examples
 
 ```bash
-# Learn a new technology
-/learn-toolkit:learn Kafka event streaming
+# tech — inferred domain, English output, full package
+/learn-toolkit:learn Next.js App Router
 
-# Learn a framework (English output)
-/learn-toolkit:learn Next.js App Router --language en
+# judaism — explicit domain, Hebrew output (default), no NotebookLM configured
+/learn-toolkit:learn hilchot shabbat candle lighting --domain judaism
 
-# Learn and save research as a book to CandleKeep
-/learn-toolkit:learn Rust ownership and borrowing --ck-write
+# philosophy — inferred domain, degraded search (only Exa available)
+/learn-toolkit:learn the Ship of Theseus and personal identity
 
-# Skip CandleKeep library scan
-/learn-toolkit:learn distributed consensus algorithms --no-ck-read
+# skip the NotebookLM package explicitly
+/learn-toolkit:learn Rust ownership and borrowing --no-notebook
+
+# override the inferred/default language
+/learn-toolkit:learn Kafka event streaming --language en
 ```
 
 ## Output
 
+Research is always saved locally, regardless of which optional backends are available:
+
 ```
-## Complete Learning Package: Kafka Event Streaming
-
-### Step 1: Quick Visual (Terminal)
-[ASCII architecture diagram of Kafka clusters, topics, partitions]
-
-### Step 2: Interactive Explorer (Browser)
-File: /tmp/playground-kafka-event-streaming.html
-
-### Step 3: Deep Learning (NotebookLM)
-| # | Notebook                     | Sources | Link        |
-|---|------------------------------|---------|-------------|
-| 1 | Kafka - Core Learning        | 28      | [Open](url) |
-| 2 | Kafka - Deep Dive            | 15      | [Open](url) |
-
-| Notebook | Type        | Status | Title                       |
-|----------|-------------|--------|-----------------------------|
-| Core     | Podcast     | Done   | יסודות קפקא ועיבוד אירועים |
-| Core     | Infographic | Done   | ארכיטקטורת קפקא             |
-| Core     | Mind Map    | Done   | עולם קפקא - מפת מושגים     |
-| Core     | Flashcards  | Done   | 12 כרטיסיות למידה           |
-| Core     | Study Guide | Done   | מדריך יישום קפקא            |
-
-### CandleKeep
-| Direction | Items | Details                                    |
-|-----------|-------|--------------------------------------------|
-| Read      | 2     | "Kafka Basics", "Event-Driven Architecture"|
-| Write     | 1     | Item #42 - "Kafka - Research Compendium"   |
-
-### Local Files
-Research saved to: /tmp/learn-kafka-event-streaming/
+$HOME/dev/learn-research/learn-<topic-slug>/
+  README.md              — index with TOC, metadata, domain, date
+  research-summary.md    — ~500-word synthesis
+  sources/
+    01-primary.md        — official docs, or Sefaria text, per domain
+    02-library.md        — CandleKeep sources
+    03-community.md      — discussion and practitioner sources
+    04-articles.md
 ```
 
-## Configuration
-
-### Language
-
-Default: **Hebrew** (`he`). Override per-invocation or edit `SKILL.md`.
-
-### Research Backends
-
-Tavily (MCP or CLI) and Exa are required. The workflow checks for them at startup and shows setup instructions if missing:
-
-| Available | Behavior |
-|-----------|----------|
-| Tavily MCP + Exa + NotebookLM | Full coverage via MCP (best) |
-| Tavily CLI + Exa + NotebookLM | CLI for Tavily, MCP for Exa |
-| + CandleKeep (`ck` CLI) | Scans library for existing knowledge, optionally writes book back |
-| Missing Tavily, Exa, or NotebookLM | Workflow stops with setup instructions |
-
-### Artifact Types
-
-Default: podcast + infographic + mind map + flashcards + **study guide** (implementation-focused with action items). Additional types available in `references/artifact-generation.md`:
-
-| Type | Options |
-|------|---------|
-| Audio | `deep_dive`, `brief`, `critique`, `debate` |
-| Infographic | `bento_grid`, `sketch_note`, `professional`, `editorial` |
-| Video | `explainer`, `brief`, `cinematic` |
-| Slides | `detailed_deck`, `presenter_slides` |
-| Report | `Briefing Doc`, `Study Guide`, `Blog Post` |
+When NotebookLM is available, the run also reports a notebook table and an artifact
+status table (podcast, infographic, mind map, flashcards, study guide). NotebookLM
+notebooks cap at 50 sources; the workflow overflows to a new notebook before the cap is
+hit.
 
 ## File Structure
 
 ```
-learn-toolkit/                                    # Plugin root (plugins/learn-toolkit/)
+learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
-│   └── plugin.json                               # Plugin manifest (name, version, metadata)
-├── .mcp.json                                     # MCP servers (Tavily, Exa) with ${ENV_VAR} refs
-├── CLAUDE.md                                     # AI reads this for paste-URL setup flow
-├── README.md
+│   └── plugin.json                            # Plugin manifest (name, version 2.0.0)
+├── .mcp.json                                   # MCP servers (Tavily, Exa) with ${ENV_VAR} refs
+├── hooks/
+│   ├── hooks.json
+│   ├── validate-output.sh
+│   └── verify-artifacts.sh
+├── references/
+│   └── setup-guide.md                          # AI-assistant install walkthrough
+├── README.md                                   # This file
 ├── LICENSE
 └── skills/
-    ├── visualize/
-    │   └── SKILL.md                              # Step 1: ASCII diagrams
-    ├── playground/
-    │   └── SKILL.md                              # Step 2: Interactive HTML
     └── learn/
-        ├── SKILL.md                              # Step 3: Deep learning
+        ├── SKILL.md                            # The one command: phases, flags, routing
         └── references/
-            ├── notebooklm-loading.md             # Notebook overflow logic
-            ├── artifact-generation.md            # NotebookLM tool signatures
-            └── candlekeep-integration.md         # CandleKeep read/write reference
+            ├── domains/
+            │   ├── tech.md
+            │   ├── philosophy.md
+            │   └── judaism.md
+            ├── notebooklm-loading.md           # Notebook overflow logic
+            ├── artifact-generation.md          # NotebookLM tool signatures
+            └── candlekeep-integration.md       # CandleKeep read/write reference
 ```
 
 ## License
