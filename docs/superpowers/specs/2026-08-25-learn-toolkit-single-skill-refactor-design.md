@@ -23,19 +23,12 @@ building any Notion integration (see §11).
 |---|---|---|
 | D1 | One skill: `/learn <subject>`, with `--domain`, `--language`, `--no-notebook` | User requirement. Signature stays as stated. |
 | D2 | Domain is **inferred** from the subject; `--domain` overrides | Keeps the `/learn <subject>` signature; announce the inferred domain before spending calls. |
-| D3 | Community layer = **Exa + Tavily**, no Agent Reach | Agent Reach's Reddit/LinkedIn channels are login-gated, need exported cookies and a burner account. Rejected as a dependency. |
+| D3 | Community layer = **Exa + Tavily**, no Agent Reach | Exa reaches LinkedIn natively via `linkedin_search_exa`, and Reddit/HN/StackOverflow are publicly indexed and reachable through Tavily domain filtering. Agent Reach's cookie-export and burner-account cost buys nothing the plugin needs. Rejected as a dependency. |
 | D4 | Shared workflow spine in `SKILL.md`; per-domain detail in `references/domains/*.md` | Matches the plugin's existing progressive-disclosure pattern. Avoids an 800-line skill file. |
 | D5 | CandleKeep is scanned on **every** domain, unconditionally | User requirement. The `--no-ck-read` flag is deleted. |
 | D6 | Phase 1 fans out **one subagent per search backend**, dispatched in one message | User requirement. Also the token win — see §7. |
 | D7 | Default language: `tech` → **English**; `philosophy`, `judaism` → **Hebrew** | User requirement. `--language <code>` overrides. |
 | D8 | NotebookLM optional; CandleKeep write is a **prompt**, not a flag | User requirement. Replaces `--ck-write`. |
-
-### D3 addendum — LinkedIn is recovered anyway
-
-`linkedin_search_exa` is a first-class tool of the Exa MCP server. It was absent only because
-the `tools=` filter in the server URL excluded it. Fixed on both machines 2026-08-25 (§10).
-The LinkedIn coverage gap cited when D3 was decided no longer applies at the same severity:
-Exa reaches LinkedIn profile/company data natively, with no credentials.
 
 ## 3. Command surface
 
@@ -89,7 +82,7 @@ misroute cheap to correct.
 
 | Phase | Name | Notes |
 |---|---|---|
-| 0 | Backend discovery | Probe Tavily (CLI + MCP), Exa, Sefaria, CandleKeep, NotebookLM. Report a one-line matrix. |
+| 0 | Backend discovery | Probe Tavily (CLI + MCP), Exa, Sefaria, CandleKeep, NotebookLM. Report a one-line matrix. **Auth probe = `tvly auth`, not `tvly --status`** — see §8. |
 | 0.5 | Domain resolution | Infer or take `--domain`; load `references/domains/<domain>.md`; announce. |
 | 1 | **Parallel research fan-out** | One subagent per backend, single dispatch. See §7. |
 | 2 | Merge + synthesize | Dedupe by URL, rank by domain source priority, write ~500-word synthesis. |
@@ -126,11 +119,17 @@ This is the point of the fan-out: ~10k tokens of search output stays inside the 
 ~500 tokens of digest returns. Per the global convention, spawn counts stay low — 3–4 agents,
 one per backend, no reviewers or verifiers.
 
-**Compose with `tavily-dynamic-search`.** That skill (installed 2026-08-25) pipes `tvly --json`
-through Python so raw HTML never enters context — a documented ~100–200x token reduction.
-Tavily subagents MUST use that pattern rather than bare `tvly` calls. It is complementary to
-the fan-out, not a substitute: subagents give parallelism, dynamic-search gives token economy
-inside each.
+**Token economy is per-backend, and the two backends need different levers.**
+
+- *Tavily subagents* — MUST use the `tavily-dynamic-search` pattern (skill installed
+  2026-08-25): pipe `tvly --json` through Python so raw HTML never enters context, a
+  documented ~100–200x reduction. Never call bare `tvly`. This composes with the fan-out
+  rather than replacing it: subagents give parallelism, dynamic-search gives token economy
+  inside each.
+- *Exa subagents* — there is no pipe to interpose; Exa MCP results arrive through the tool
+  result directly. The equivalent lever is the §8 content mode: **`highlights` for triage of
+  all results, then `text` with an explicit `maxCharacters` for only the 3–5 keepers.** An
+  Exa subagent that requests full text for every result defeats the fan-out's purpose.
 
 ## 8. Tool usage rules — corrections against vendor docs
 
@@ -147,6 +146,12 @@ best-practices page plus the live MCP tool schemas.
 | 4-site `include_domains` list | "Keep domain lists short and relevant" | ≤3 sites |
 | — | `auto_parameters` can silently set advanced depth (2 credits) | Set `search_depth` explicitly |
 | — | Queries <1500 chars; split multi-topic into focused queries | One focused query per subagent |
+
+**Auth detection — use `tvly auth`, not `tvly --status`.** Verified on 0.1.6: `tvly auth`
+prints `> Authenticated via TAVILY_API_KEY environment variable` with a masked key and exits 0.
+`tvly --status` prints a two-part banner (version, then auth) — the current SKILL.md's check
+pipes it through `head -2`, which truncates the auth line and silently reports "not
+authenticated". Presence check stays `tvly --version`; auth check becomes `tvly auth`.
 
 ### Exa
 
@@ -197,7 +202,9 @@ Completed before implementation, on both machines. Both now at parity.
 - The 7 pre-existing Mac skills were **byte-identical** to the repo head; only
   `tavily-dynamic-search` was genuinely new. The server had none and now has all 8.
 - Exa `tools=` filter, both machines:
-  - **removed** `crawling_exa` (legacy alias of `web_fetch_exa`),
+  - **removed** `crawling_exa` (alias — *verified*: `src/tools/webFetch.ts:40` registers
+    `toolName || "web_fetch_exa"` and line 94 sends `integrationHeaders("crawling-mcp", …)`,
+    i.e. one tool, two names; no capability lost),
     `deep_researcher_start`, `deep_researcher_check` (deprecated)
   - **added** `web_fetch_exa` (referenced by other Exa tools' own descriptions),
     `linkedin_search_exa`, `deep_search_exa`
