@@ -56,7 +56,7 @@ Wait for the summary to process before generating artifacts.
 ## Overflow Logic
 
 ```
-current_count = read /tmp/learn-workflow-state.json -> notebooks[-1].source_count
+current_count = read /tmp/learn-workflow-state-<topic-slug>.json -> notebooks[-1].source_count
 
 if current_count >= 48:
   1. Create new notebook with next-tier name
@@ -73,6 +73,7 @@ After all sources added:
 ```json
 {
   "topic": "string",
+  "domain": "tech|philosophy|judaism",
   "notebooks": [
     {
       "id": "uuid",
@@ -86,8 +87,13 @@ After all sources added:
     "read_ids": [],
     "write_id": null
   },
-  "local_path": "/tmp/learn-<topic-slug>/"
+  "local_path": "$HOME/dev/learn-research/learn-<topic-slug>/"
 }
 ```
+
+State file lives at `/tmp/learn-workflow-state-<topic-slug>.json` — topic-scoped, so
+concurrent `/learn` runs on different subjects don't clobber each other's state. The
+five keys `topic`, `domain`, `notebooks`, `total_sources`, `local_path` are all
+required; the workflow's validation hook rejects the file if any is missing.
 
 Update the state file after EVERY notebook creation and source addition. Read it before any operation.
