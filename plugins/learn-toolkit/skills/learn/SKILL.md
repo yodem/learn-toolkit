@@ -22,7 +22,7 @@ in which case the flag always wins. Each domain has a language default —
 when present. Do not hardcode a language anywhere in this workflow; always use the
 resolved value from Phase 0.5.
 
-NotebookLM notebooks cap at 50 sources. Track the running count in the state file and
+NotebookLM notebooks cap at 100 sources. Track the running count in the state file and
 overflow to a new notebook before the cap is hit (see
 `${CLAUDE_SKILL_DIR}/references/notebooklm-loading.md`).
 
@@ -279,7 +279,7 @@ Omit the Notebooks and Artifacts tables from the final report and continue strai
 Phase 6. **Never stop the workflow because NotebookLM is missing or skipped.**
 
 When available, consult `${CLAUDE_SKILL_DIR}/references/notebooklm-loading.md` for
-notebook-creation strategy, source-addition patterns, and the 48-source overflow
+notebook-creation strategy, source-addition patterns, and the 98-source overflow
 threshold (read `notebooks[-1]` from the topic-scoped state file, not the old unscoped
 path), and `${CLAUDE_SKILL_DIR}/references/artifact-generation.md` for exact tool-call
 signatures.
@@ -290,7 +290,7 @@ signatures.
 3. Add remaining URL/primary-text sources (`wait=false`).
 4. Add the research summary as a text source (`wait=true`).
 5. Update the state file's `notebooks[]` and `total_sources` after each addition.
-6. Overflow to a new notebook when the running count reaches 48.
+6. Overflow to a new notebook when the running count reaches 98.
 
 **Phase 4 — Generate Artifacts:** create podcast, infographic, mind map, flashcards, and
 study guide in parallel (`confirm=true` on each), all using
@@ -433,7 +433,7 @@ indefinitely or produces a false stale-state warning.
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
 | NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |
-| Notebook source count reaches 48 | Cap approaching | Create overflow notebook per `notebooklm-loading.md`, continue |
+| Notebook source count reaches 98 | Cap approaching | Create overflow notebook per `notebooklm-loading.md`, continue |
 | Studio artifact generation fails | NotebookLM internal error | Retry once; if it still fails, report "Failed" in the summary table |
 | State file write fails | `/tmp` permission issue | Continue without state tracking; keep counts in-memory for this run |
 | `ck` not found | CLI not installed | `HAS_CANDLEKEEP=false`; skip library subagent and Phase 7 silently |

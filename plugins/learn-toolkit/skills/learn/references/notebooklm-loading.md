@@ -58,7 +58,7 @@ Wait for the summary to process before generating artifacts.
 ```
 current_count = read /tmp/learn-workflow-state-<topic-slug>.json -> notebooks[-1].source_count
 
-if current_count >= 48:
+if current_count >= 98:
   1. Create new notebook with next-tier name
   2. Update state file with new notebook ID
   3. Continue adding to new notebook

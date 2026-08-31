@@ -122,7 +122,7 @@ mcp__notebooklm-mcp__source_add(
 )
 ```
 
-Max 3 items = negligible impact on the 50-source limit.
+Max 3 items = negligible impact on the 100-source limit.
 
 ## Local Files
 

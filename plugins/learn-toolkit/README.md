@@ -224,7 +224,7 @@ $HOME/dev/learn-research/learn-<topic-slug>/
 
 When NotebookLM is available, the run also reports a notebook table and an artifact
 status table (podcast, infographic, mind map, flashcards, study guide). NotebookLM
-notebooks cap at 50 sources; the workflow overflows to a new notebook before the cap is
+notebooks cap at 100 sources; the workflow overflows to a new notebook before the cap is
 hit.
 
 ## File Structure
