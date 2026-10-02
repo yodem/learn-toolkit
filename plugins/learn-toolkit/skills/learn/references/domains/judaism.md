@@ -36,6 +36,9 @@ Exa — describe the ideal page:
 ## Output Settings
 
 - Language: `he`
-- Playground (Phase 6b): **no**
+- Learning ladder (Phase 2 synthesis and Phase 6b page): **Basics** — the primary text
+  and its plain meaning, with key terms explained; **Advanced usage** — the commentators'
+  positions, the sugya's structure and the practical halakha; **Related research** —
+  academic scholarship, shiurim and library sources.
 - NotebookLM artifact focus: text-and-commentary — sugya structure, positions of the
   commentators, practical halakhic upshot where relevant.

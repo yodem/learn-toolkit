@@ -40,5 +40,8 @@ tvly search "<subject> Stanford Encyclopedia of Philosophy overview" --depth adv
 ## Output Settings
 
 - Language: `he`
-- Playground (Phase 6b): **no** — a parameter-toggle explorer does not fit argumentative material.
+- Learning ladder (Phase 2 synthesis and Phase 6b page): **Basics** — the question in
+  plain words, why it matters and the key terms; **Advanced usage** — the main positions,
+  their arguments, objections and replies; **Related research** — primary texts, SEP-style
+  overviews and secondary literature.
 - NotebookLM artifact focus: argument structure — positions, objections, replies.

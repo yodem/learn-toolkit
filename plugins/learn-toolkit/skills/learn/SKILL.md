@@ -2,10 +2,10 @@
 name: learn
 description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and CandleKeep with one subagent per backend, then optionally builds a NotebookLM package and files findings into a CandleKeep field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]"
-allowed-tools: Task, Write, Read, Bash(tvly *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
+allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
-  version: 2.0.0
+  version: 2.1.0
   mcp-server: tavily, exa, notebooklm-mcp
   category: learning
   tags: [research, domains, tavily, exa, sefaria, candlekeep, notebooklm]
@@ -25,6 +25,14 @@ resolved value from Phase 0.5.
 NotebookLM notebooks cap at 100 sources. Track the running count in the state file and
 overflow to a new notebook before the cap is hit (see
 `${CLAUDE_SKILL_DIR}/references/notebooklm-loading.md`).
+
+**Teach basics first.** Everything this workflow shows the user — the synthesis, the
+learning page, the final report — runs in one order: **basics → advanced usage →
+related research**. Assume the user is new to the subject. Define every term before using
+it, say what problem the subject solves before how it works, and give one small concrete
+example before any generalization. No numbers, benchmarks, version tables or comparison
+grids in the basics; when a number appears later, say in the same sentence what it
+measures and why it matters. A table is never the first thing the user sees.
 
 CRITICAL: follow the phases in order. Each phase has a verification gate — do not
 proceed until it passes. The **only** hard stop in this entire workflow is zero
@@ -72,12 +80,16 @@ Run these `ToolSearch` calls in parallel:
 4. `ToolSearch(query="+notebooklm")` — look for `mcp__notebooklm-mcp__notebook_create`,
    `source_add`, `studio_create`, `studio_status`.
 
+Also note whether the `Artifact` tool is in your tool list (it is a built-in Claude Code
+tool, not an MCP server, so no `ToolSearch` is needed).
+
 Set:
 - `HAS_TAVILY_MCP` = true if `mcp__tavily__tavily_search` was found.
 - `HAS_TAVILY` = true if `HAS_TAVILY_MCP` OR `HAS_TAVILY_SKILLS`.
 - `HAS_EXA` = true if `mcp__exa__web_search_advanced_exa` was found.
 - `HAS_SEFARIA` = true if `mcp__claude_ai_Sefaria__text_search` was found.
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
+- `HAS_ARTIFACT` = true if the `Artifact` tool is available.
 
 #### Step 0c: CandleKeep CLI
 
@@ -90,7 +102,7 @@ Set `HAS_CANDLEKEEP`. Missing is not an error.
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Exa ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Exa ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
 ```
 
 **The only hard stop in the workflow:** if `HAS_TAVILY` is false AND `HAS_EXA` is false,
@@ -116,6 +128,8 @@ Every other backend degrades instead of stopping:
   carry more weight.
 - `HAS_CANDLEKEEP = false` — the library subagent and Phase 7 offer are skipped silently.
 - `HAS_NOTEBOOKLM = false` — see Phase 3-5.
+- `HAS_ARTIFACT = false` — the Phase 6b learning page is still written locally, just not
+  published (see Phase 6b).
 
 ### Phase 0.5: Resolve Domain
 
@@ -213,9 +227,17 @@ weakest subagent with a broadened query before proceeding.
 1. Collect every subagent's digest array. Deduplicate by URL (library/primary-text
    entries dedupe by id instead).
 2. Rank by the resolved domain's `## Source Ranking` order.
-3. Write a synthesis of roughly 500 words (~3000 characters — the validation hook warns
-   below 2500) covering at least 3 distinct subtopics, drawing only from the digests'
-   `why_it_matters` and `key_claims`, not from re-fetching pages.
+3. Write a synthesis of at least ~500 words (~3000 characters — the validation hook
+   warns below 2500), drawing only from the digests' `why_it_matters` and `key_claims`,
+   not from re-fetching pages. It has one section per tier of the
+   resolved domain's `## Output Settings` → Learning ladder line, in this order:
+   - A `## Basics` section — what the subject is, the problem it solves, the core terms (each
+     defined in plain words), one mental model, one minimal example. No numbers or
+     tables.
+   - A `## Advanced usage` section — how it is used in depth: patterns, tradeoffs, pitfalls, edge
+     cases, building only on terms the Basics already defined.
+   - A `## Related research` section — what the sources add: the strongest sources and their key
+     claims, where they disagree, open questions.
 4. Save the workflow state file. The validation hook requires five keys — `topic`,
    `domain`, `notebooks`, `total_sources`, `local_path` — and rejects the file if any is
    missing. Also write a sixth top-level key, `candlekeep` (`read_ids`, `write_id`): the
@@ -228,8 +250,8 @@ echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_so
 
 `$TOPIC_SLUG` is the subject lowercased, spaces to hyphens, special characters removed.
 
-**Verification gate:** state file written with the 5 hook-required keys plus `candlekeep`; synthesis covers
-≥3 subtopics and is ≥2500 characters.
+**Verification gate:** state file written with the 5 hook-required keys plus `candlekeep`; synthesis has
+the three sections in basics → advanced → research order and is ≥2500 characters.
 
 ### Phase 2.5: Save Local Files
 
@@ -244,7 +266,8 @@ mkdir -p "$HOME/dev/learn-research/learn-$TOPIC_SLUG"
 ```
 $HOME/dev/learn-research/learn-<topic-slug>/
   README.md              — index with TOC, metadata, domain, date
-  research-summary.md    — ~500-word synthesis
+  research-summary.md    — the Phase 2 synthesis (basics → advanced → research)
+  learning-page.html     — the Phase 6b learning page
   sources/
     01-primary.md        — official docs, or Sefaria text, per domain
     02-library.md        — CandleKeep sources
@@ -275,7 +298,7 @@ When skipped, emit exactly:
 > NotebookLM not available — skipping the notebook package. Research, local files and
 > the CandleKeep offer are unaffected.
 
-Omit the Notebooks and Artifacts tables from the final report and continue straight to
+Omit the NotebookLM notebook and NotebookLM artifact tables from the final report and continue straight to
 Phase 6. **Never stop the workflow because NotebookLM is missing or skipped.**
 
 When available, consult `${CLAUDE_SKILL_DIR}/references/notebooklm-loading.md` for
@@ -312,28 +335,55 @@ IDs; polling ends with every artifact reported `completed` or `failed`, never le
 
 #### 6a: ASCII Diagram — always
 
-Using the Phase 2 synthesis, render an ASCII diagram inline in the terminal — pick the
-shape that fits the subject (architecture diagram, flowchart, comparison table, mind
-map / hierarchy). Unicode box-drawing characters, width under 100 chars.
+Using the Phase 2 synthesis, render an ASCII diagram inline in the terminal that explains
+the **basics** — how the core pieces relate or how one thing flows through them. Prefer
+a concept map, flowchart or architecture sketch over a comparison table. Unicode
+box-drawing characters, width under 100 chars.
 
-#### 6b: Interactive Playground — tech only
+#### 6b: Learning Page — Artifact, every domain
 
-**Condition:** the resolved domain's `## Output Settings` → Playground line says
-**yes**. Currently that is `tech` only — `philosophy` and `judaism` say no because a
-parameter-toggle explorer doesn't fit argumentative or textual material. Skip silently
-for those domains.
+Build one HTML learning page from the Phase 2 synthesis and the ranked digests, and
+publish it as a Claude Code Artifact. Do not delegate to any other HTML-generating skill.
 
-When it runs, do not generate the HTML yourself — delegate:
+**Before writing**, call `Artifact` with `action: "quickstart"` and `intent: "other"`, and
+follow the design contract it returns (title, theming, libraries, layout). Do not
+re-specify those rules here.
 
-```
-Skill(skill="playground:playground", args="<subject> — based on this research summary: <paste the Phase 2 synthesis>")
-```
+**Page structure — three sections, in this order, never reordered:**
 
-Let the playground skill own all HTML creation, styling, and file output.
+1. **Basics** — open with two or three sentences a newcomer can follow: what the subject
+   is and what problem it solves. Then the core terms as a short glossary (each defined in
+   plain words before any later section uses it), one mental model or analogy, the 6a
+   diagram redrawn as inline SVG or HTML, and one minimal worked example. No numbers,
+   benchmarks or tables here.
+2. **Advanced usage** — patterns, tradeoffs, pitfalls and edge cases, each tied back to a
+   term from the Basics. A table is allowed here only after the prose that explains
+   what it compares; every number states what it measures and why it matters.
+3. **Related research** — the ranked sources (title linked to URL or citation, its
+   `kind`, one line on why it matters, its key claims), where sources disagree, and open
+   questions to explore next.
 
-**Verification gate:** 6a always produced a rendered diagram. 6b either produced an
-opened HTML file (tech) or was skipped with no output (philosophy/judaism) — no partial
-state in between.
+Add a short contents list at the top linking the three sections. What each tier means
+for this subject comes from the resolved domain's `## Output Settings` → Learning ladder
+line.
+Write the page in `$LANGUAGE`. The publish step supplies the `<html>`/`<head>`/`<body>`
+skeleton, so for a right-to-left language (`he`) put `lang="he" dir="rtl"` on the page's
+outermost wrapper element instead of on `<html>`.
+
+**Write, then publish:**
+
+1. Write the page to `$HOME/dev/learn-research/learn-$TOPIC_SLUG/learning-page.html` —
+   the durable copy, kept whatever happens next.
+2. If `HAS_ARTIFACT`: publish it with `Artifact` (`file_path` set to that file, an
+   `icon` such as `book`, a one-sentence `description`). If the publish is refused
+   because the file is outside the allowed directories, copy it into the session
+   scratchpad directory and publish that copy instead.
+3. If `HAS_ARTIFACT` is false or the publish fails, keep the local file and report its
+   path — never stop the workflow over it.
+
+**Verification gate:** 6a produced a rendered diagram. 6b wrote `learning-page.html` with
+the three sections in order and either published it (artifact URL in hand) or reported
+the local path with the reason it was not published.
 
 ### Phase 7: CandleKeep Field Research Offer
 
@@ -360,6 +410,14 @@ If the user declines, skip without writing anything.
 **Verification gate:** either skipped silently (`HAS_CANDLEKEEP = false`), declined by
 the user, or a successful append confirmed by read-back.
 
+### Final Report
+
+Open the final message with three to five plain sentences that teach the basics: what
+the subject is, the problem it solves and the one idea to hold onto. Then the artifact
+link (or the local `learning-page.html` path), then the local research path. Status
+tables (backends, notebooks, NotebookLM artifacts) come last, after the explanation —
+never first.
+
 The run's state file is intentionally left in place after the final report — deleting it
 is not this skill's job, and `rm` is deliberately not in `allowed-tools`. The state file
 is disposable: the plugin's `verify-artifacts.sh` Stop hook reaps any state file older
@@ -372,18 +430,21 @@ indefinitely or produces a false stale-state warning.
 
 `/learn-toolkit:learn Next.js App Router`
 
-1. Phase 0: Tavily MCP ✓, Exa ✓, CandleKeep ✓, NotebookLM ✓.
+1. Phase 0: Tavily MCP ✓, Exa ✓, CandleKeep ✓, NotebookLM ✓, Artifact ✓.
 2. Phase 0.5: no `--domain` given → inferred `tech` (documentation/framework subject).
    Announces `Domain: tech (inferred) — official docs, source repos, practitioner
    discussion. Override with --domain.` Language resolves to `en`.
 3. Phase 1: dispatches `docs`, `code`, `community`, `library` subagents from
    `domains/tech.md` in one message.
 4. Phase 2: merges digests, ranks official docs > repos > library > discussion, writes
-   ~500-word synthesis, saves state file with `"domain":"tech"`.
+   the synthesis (Basics: what a router is and why the App Router replaced pages;
+   Advanced: server components, caching, pitfalls; Related research), saves state file
+   with `"domain":"tech"`.
 5. Phase 2.5: saves to `~/dev/learn-research/learn-nextjs-app-router/`.
 6. Phase 3-5: creates notebook, generates 5 artifacts in `en`.
-7. Phase 6a: ASCII diagram of the App Router's file-based routing. Phase 6b: playground
-   comparing Pages Router vs App Router (tech says yes).
+7. Phase 6a: ASCII diagram of how a URL maps to folders in the App Router. Phase 6b:
+   learning page published as an Artifact — basics of file-based routing first, then
+   layouts/caching/streaming, then the ranked sources.
 8. Phase 7: offers to file findings into a `Field Research — Next.js App Router` book.
 
 ### Example 2 — judaism, primary-text-first
@@ -405,7 +466,9 @@ indefinitely or produces a false stale-state warning.
 6. Phase 3-5: **skipped** — single notice printed: "NotebookLM not available — skipping
    the notebook package. Research, local files and the CandleKeep offer are
    unaffected." No notebook/artifact tables in the final report.
-7. Phase 6a: ASCII diagram of the sugya structure. Phase 6b: skipped (judaism says no).
+7. Phase 6a: ASCII diagram of the sugya structure. Phase 6b: Hebrew RTL learning page —
+   the text and its plain meaning first, then the commentators and halakhic positions,
+   then scholarship.
 8. Phase 7: offers to file findings into a CandleKeep field-research book.
 
 ### Example 3 — philosophy, degraded search
@@ -420,7 +483,9 @@ indefinitely or produces a false stale-state warning.
 3. Phase 1: dispatches `literature` (Exa only, Tavily-dependent query patterns skipped),
    `overview` (degrades — notes Tavily unavailable, relies on Exa for encyclopedic
    framing too), `library` (CandleKeep).
-4. Phase 2 onward proceeds normally; Phase 6b skipped (philosophy says no).
+4. Phase 2 onward proceeds normally; Phase 6b's learning page opens with the puzzle and
+   its terms (identity, persistence), then the positions and objections, then the
+   literature.
 
 ## Error Recovery
 
@@ -435,6 +500,7 @@ indefinitely or produces a false stale-state warning.
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |
 | Notebook source count reaches 98 | Cap approaching | Create overflow notebook per `notebooklm-loading.md`, continue |
 | Studio artifact generation fails | NotebookLM internal error | Retry once; if it still fails, report "Failed" in the summary table |
+| `Artifact` tool unavailable, or the publish is refused | Not Claude Code, or the file is outside the allowed directories | Copy `learning-page.html` to the scratchpad and retry once; otherwise keep the local file, report its path and the reason, continue |
 | State file write fails | `/tmp` permission issue | Continue without state tracking; keep counts in-memory for this run |
 | `ck` not found | CLI not installed | `HAS_CANDLEKEEP=false`; skip library subagent and Phase 7 silently |
 | `ck items list` fails | Auth issue | Warn once, set `HAS_CANDLEKEEP=false`, continue |

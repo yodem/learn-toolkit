@@ -40,5 +40,8 @@ Exa — describe the ideal page, never keywords:
 ## Output Settings
 
 - Language: `en`
-- Playground (Phase 6b): **yes**
+- Learning ladder (Phase 2 synthesis and Phase 6b page): **Basics** — what it is, the
+  problem it solves, the core concepts and a minimal working example; **Advanced usage** —
+  real-world patterns, configuration, tradeoffs and pitfalls; **Related research** —
+  official docs, source repos and practitioner discussion.
 - NotebookLM artifact focus: implementation-oriented — code examples, pitfalls, action items.
