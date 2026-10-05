@@ -1,12 +1,12 @@
 ---
 name: learn
 description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and CandleKeep with one subagent per backend, then optionally builds a NotebookLM package and files findings into a CandleKeep field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
-argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]"
+argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]"
 allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
-  version: 2.1.0
-  mcp-server: tavily, exa, notebooklm-mcp
+  version: 2.2.0
+  mcp-server: tavily, exa, exa-agent, notebooklm-mcp
   category: learning
   tags: [research, domains, tavily, exa, sefaria, candlekeep, notebooklm]
 ---
@@ -59,21 +59,23 @@ negative:
 tvly auth 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=false"
 ```
 
-Set `HAS_TAVILY_SKILLS = true` only if both checks pass.
+Require `tvly` version 0.1.8 or newer. Below that, set `HAS_TAVILY_SKILLS=false` and
+suggest `tvly update`. Set it true only if the version and auth checks pass.
 
 #### Step 0b: MCP backends
 
 Run these `ToolSearch` calls in parallel:
 
-1. `ToolSearch(query="+tavily search")` — look for `mcp__tavily__tavily_search` /
-   `mcp__tavily__tavily_extract`.
-2. `ToolSearch(query="+exa search")` — look for `mcp__exa__web_search_advanced_exa`,
-   `mcp__exa__get_code_context_exa`, and `mcp__exa__linkedin_search_exa`. These are the
-   three Exa tools this workflow uses — the third only by the `tech` domain's
-   `community` subagent (see `references/domains/tech.md`); the other two domains never
-   need it. Do not probe for or fall back to any other Exa tool — specifically not
-   `crawling_exa`, `deep_researcher_start`, or `deep_researcher_check`, none of which are
-   part of this workflow.
+1. `ToolSearch(query="+tavily tavily_search")` — match tools ending in
+   `__tavily_search` / `__tavily_extract`.
+2. `ToolSearch(query="+exa web_search_advanced_exa")` and
+   `ToolSearch(query="agent_run")`. Plugin tools are namespaced
+   `mcp__plugin_learn-toolkit_<server>__<tool>`; a user may also have their own server,
+   so match by suffix. `HAS_EXA` means a tool ending in `__web_search_advanced_exa`
+   exists. `HAS_EXA_AGENT` means a tool ending in `__agent_run` exists on a server
+   whose name contains `exa`. Use the full discovered tool names in every subagent prompt.
+   This workflow uses `web_search_advanced_exa`, `web_search_exa`, and
+   `web_fetch_exa`; it uses `agent_run` only with `--deep`.
 3. `ToolSearch(query="+sefaria text search")` — look for
    `mcp__claude_ai_Sefaria__text_search`. Only needed if the domain resolves to
    `judaism`, but cheap to check now alongside the others.
@@ -84,9 +86,10 @@ Also note whether the `Artifact` tool is in your tool list (it is a built-in Cla
 tool, not an MCP server, so no `ToolSearch` is needed).
 
 Set:
-- `HAS_TAVILY_MCP` = true if `mcp__tavily__tavily_search` was found.
+- `HAS_TAVILY_MCP` = true if a tool ending in `__tavily_search` was found.
 - `HAS_TAVILY` = true if `HAS_TAVILY_MCP` OR `HAS_TAVILY_SKILLS`.
-- `HAS_EXA` = true if `mcp__exa__web_search_advanced_exa` was found.
+- `HAS_EXA` = true if a tool ending in `__web_search_advanced_exa` was found.
+- `HAS_EXA_AGENT` = true if `agent_run` was found on a server whose name contains `exa`.
 - `HAS_SEFARIA` = true if `mcp__claude_ai_Sefaria__text_search` was found.
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
@@ -102,7 +105,7 @@ Set `HAS_CANDLEKEEP`. Missing is not an error.
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Exa ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
 ```
 
 **The only hard stop in the workflow:** if `HAS_TAVILY` is false AND `HAS_EXA` is false,
@@ -113,14 +116,15 @@ after fixing the above." Do not fall back to bare `WebSearch`.
 If Tavily is missing:
 > **Tavily is not connected.**
 > **Option A — CLI:** `curl -fsSL https://cli.tavily.com/install.sh | bash`, then
-> `tvly login` (or `tvly login --api-key tvly-YOUR_KEY`).
-> **Option B — MCP:** get a key at https://tavily.com, `export TAVILY_API_KEY="..."` in
-> your shell rc file, `source` it, then restart Claude Code.
+> `tvly init --agent claude-code` (or `tvly login`).
+> **Option B — MCP:** run `/plugin configure learn-toolkit@learn-toolkit-marketplace`
+> and enter your Tavily key, or sign in from `/mcp` → `plugin:learn-toolkit:tavily`.
 > Do not paste your API key in this chat.
 
-If Exa is missing, check `[ -n "$EXA_API_KEY" ]` first: if set, tell the user to restart
-Claude Code (the MCP server loads keys at startup); if unset, point to https://exa.ai and
-the same env-var + restart flow.
+> **Exa is not connected.** It works keyless; if it is missing, run `/mcp` and reconnect
+> `plugin:learn-toolkit:exa`. To raise rate limits and enable `--deep`, run
+> `/plugin configure learn-toolkit@learn-toolkit-marketplace` and enter your Exa key,
+> then `/reload-plugins` or restart.
 
 Every other backend degrades instead of stopping:
 - `HAS_SEFARIA = false` — only matters if the resolved domain is `judaism`; note it in
@@ -153,9 +157,13 @@ Resolve `$LANGUAGE`: `--language <code>` if passed, else the domain default (`te
 `en`; `philosophy`/`judaism` → `he`).
 
 Derive `$SUBJECT`: `$ARGUMENTS` with every `--flag value` pair (`--domain <x>`,
-`--language <x>`, `--no-notebook`) stripped out, leaving only the subject text. This is
+`--language <x>`, `--no-notebook`, `--deep`, `--deep=<effort>`) stripped out, leaving only the subject text. This is
 the value handed to every subagent in Phase 1 and stored as `"topic"` in the state file
 in Phase 2.
+
+Parse deep mode before deriving the subject: bare `--deep` sets `$DEEP_EFFORT=medium`;
+`--deep=high` and `--deep=xhigh` set the requested effort. Any other value prints the
+allowed values and uses `medium`. Without either flag, leave `$DEEP_EFFORT` unset.
 
 Read `${CLAUDE_SKILL_DIR}/references/domains/$DOMAIN.md` in full before doing anything
 else — it defines the Phase 1 roster, Source Ranking, Query Patterns, and Output
@@ -200,17 +208,20 @@ accumulating every subagent's raw exploration.
 
 **Token-economy rules — include in every subagent's prompt:**
 
-- Tavily subagents MUST pipe `tvly --json` output through Python (the
-  `tavily-dynamic-search` pattern) so raw HTML never enters context. Never call bare
-  `tvly` without `--json` piped through a filter.
-- Exa subagents use `mcp__exa__web_search_advanced_exa` and `mcp__exa__get_code_context_exa`
-  as the baseline for every domain, plus `mcp__exa__linkedin_search_exa` for the `tech`
-  domain's `community` subagent only (per its roster entry in `references/domains/tech.md`)
-  — these three are the only Exa tools this workflow uses. A subagent must not fall back to
-  `crawling_exa`, `deep_researcher_start`, `deep_researcher_check`, or any other Exa tool it
-  happens to find via its own `ToolSearch`. They have no pipe to interpose, so use
-  `highlights` first to triage every result cheaply, then call `text` with an explicit
-  `maxCharacters` only for the 3-5 keepers worth full content.
+- Tavily CLI subagents run `tvly search … --json -o "$(mktemp -d)/r.json"` and read the
+  file through a Python filter (the `tavily-dynamic-search` pattern). Use
+  `--depth advanced --chunks-per-source 3` for research and `--depth fast` for quick
+  checks. Extract keepers with `tvly extract <url> --query "<subject>"
+  --chunks-per-source 3 --json`. A `tvly` exit code 3 means auth: return
+  `{"error":"tavily-auth"}` and never run `tvly login`.
+- Exa subagents use the discovered full tool names ending in
+  `__web_search_advanced_exa`, `__web_search_exa`, and `__web_fetch_exa`. Use advanced
+  search for targeted queries (category, domains, date filters, highlights with a
+  `highlightsQuery`) and regular search for broad checks. Triage on highlights, then fetch
+  the 3-5 keepers with `maxCharacters: 4000`; request one content view per call. Allowed
+  categories: `publication`, `personal site`, `news`, `company`, `people`, and
+  financial report. Put recency in query wording; use published-date filters only for
+  explicit windows and `maxAgeHours` only when a fresh crawl is needed.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
   pull commentary chains — never substitute open-web search for the primary text.
 - CandleKeep `library` subagents follow
@@ -221,6 +232,38 @@ accumulating every subagent's raw exploration.
 **Verification gate:** every dispatched subagent returned at least one digest entry, and
 combined the roster produced at least 5 unique URLs/sources. If fewer, re-dispatch the
 weakest subagent with a broadened query before proceeding.
+
+### Deep research (only with --deep)
+
+This is Phase 1b; it runs after the regular search fan-out.
+
+Skip silently unless `$DEEP_EFFORT` is set. If `HAS_EXA_AGENT` is false and
+`HAS_TAVILY_SKILLS` is true, use the CLI fallback:
+`tvly research "<question>" --model pro --citation-format numbered --no-wait
+--output-schema '{"type":"object","required":["answer"],"properties":{"answer":{"type":"string"}}}' --json`,
+then poll with `tvly research poll <request_id> --json` until `completed` or `failed`.
+If neither is available, print one notice: `--deep` needs an Exa key — run
+`/plugin configure learn-toolkit@learn-toolkit-marketplace`, then continue.
+
+Otherwise dispatch one deep subagent using the discovered `agent_run` tool. Its concrete
+question is: “What are the core concepts, current best practices and open debates in
+<subject>, as explained by <domain primary sources>?” Set `effort` to `$DEEP_EFFORT` and
+`systemPrompt` to the domain's `## Source Ranking` line followed by “prefer primary and
+official sources; every claim must be supported by a cited page; answer in <$LANGUAGE>”.
+Set `outputSchema` to:
+
+```json
+{"type":"object","required":["basics","findings","open_questions"],"properties":{"basics":{"type":"string","description":"what it is and the problem it solves, for a newcomer"},"findings":{"type":"array","items":{"type":"object","required":["claim","why_it_matters"],"properties":{"claim":{"type":"string"},"why_it_matters":{"type":"string"}}}},"open_questions":{"type":"array","items":{"type":"string"}}}}
+```
+
+If `agent_run` returns `status: "running"` with an `id`, call it again with
+the run ID as the `runId` argument (at most 6 re-calls). Read `output` only when status
+is `completed`.
+On `failed`, `cancelled`, or the poll cap, report the degraded run in the matrix and
+continue without deep results. Map each finding to a `deep_research` digest, taking URLs
+from `output.grounding[].citations[]` for that field; drop findings without a grounded
+citation. Save the run ID in state as `deep_run_id`; a follow-up deep run may pass it as
+`previousRunId`.
 
 ### Phase 2: Merge and Synthesize
 
@@ -430,7 +473,7 @@ indefinitely or produces a false stale-state warning.
 
 `/learn-toolkit:learn Next.js App Router`
 
-1. Phase 0: Tavily MCP ✓, Exa ✓, CandleKeep ✓, NotebookLM ✓, Artifact ✓.
+1. Phase 0: Tavily MCP ✓, Exa ✓, Exa Agent ✓, CandleKeep ✓, NotebookLM ✓, Artifact ✓.
 2. Phase 0.5: no `--domain` given → inferred `tech` (documentation/framework subject).
    Announces `Domain: tech (inferred) — official docs, source repos, practitioner
    discussion. Override with --domain.` Language resolves to `en`.
@@ -487,13 +530,24 @@ indefinitely or produces a false stale-state warning.
    its terms (identity, persistence), then the positions and objections, then the
    literature.
 
+### Example 4 — tech, deep research with a blank Exa key
+
+`/learn-toolkit:learn WebAssembly component model --deep`
+
+1. Phase 0: Exa search ✓, Exa Agent ✗, Tavily CLI ✓.
+2. Phase 1 runs normal search. Phase 1b uses Tavily research with numbered citations,
+   polls the request to completion, and keeps cited findings in the digest.
+
 ## Error Recovery
 
 | Error | Cause | Action |
 |-------|-------|--------|
 | Both Tavily and Exa unavailable | Neither MCP nor CLI configured, no keys | **STOP workflow.** Show setup instructions for both. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
-| Tavily CLI auth fails (`tvly auth`) | Not logged in | Run `tvly login` or set `TAVILY_API_KEY`; treat as `HAS_TAVILY_SKILLS=false` until fixed |
-| Exa MCP not found | Key unset, or set after Claude Code started | If `$EXA_API_KEY` set: tell user to restart Claude Code. If unset: show Exa setup instructions. Proceed on Tavily alone if it is available |
+| Tavily CLI auth fails (`tvly auth`) | Not logged in | Ask the user to run `tvly login`; treat as `HAS_TAVILY_SKILLS=false` until fixed |
+| Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
+| `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
+| `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |
+| `tvly` exits 3 | Authentication required | Tell the user to run `tvly login` themselves |
 | Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; `secondary` subagent (Tavily/Exa) carries more weight; continue |
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
 | NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |

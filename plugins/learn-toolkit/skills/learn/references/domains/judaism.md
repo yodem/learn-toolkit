@@ -28,7 +28,8 @@ primary text (Sefaria) > classical commentators > library (CandleKeep) > academi
 Sefaria first. Resolve the topic to a citation before searching the open web, so that
 secondary sources are evaluated against the text rather than substituting for it.
 
-Exa — describe the ideal page:
+Exa secondary research — use `web_search_advanced_exa` with `category: "publication"`;
+describe the ideal page:
 
 - GOOD: `"academic article on the reception history of <text> among medieval commentators"`
 - BAD: `"<text> commentary history"`

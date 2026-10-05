@@ -1,12 +1,22 @@
 {
   "mcpServers": {
     "tavily": {
-      "type": "url",
-      "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY}"
+      "type": "http",
+      "url": "https://mcp.tavily.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${user_config.tavily_api_key}",
+        "DEFAULT_PARAMETERS": "{\"search_depth\":\"advanced\",\"chunks_per_source\":3,\"max_results\":8}"
+      }
     },
     "exa": {
-      "type": "url",
-      "url": "https://mcp.exa.ai/mcp?exaApiKey=${EXA_API_KEY}&tools=web_search_exa,web_search_advanced_exa,get_code_context_exa,web_fetch_exa,company_research_exa,people_search_exa,linkedin_search_exa,deep_search_exa"
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa",
+      "headers": { "x-api-key": "${user_config.exa_api_key}" }
+    },
+    "exa-agent": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?tools=agent_run",
+      "headers": { "x-api-key": "${user_config.exa_api_key}" }
     }
   }
 }

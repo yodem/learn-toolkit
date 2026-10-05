@@ -23,11 +23,7 @@ This installs the plugin's one skill and configures MCP servers automatically:
 
 ### Step 2: Set up API keys for /learn (optional but recommended)
 
-The plugin's `.mcp.json` configures Tavily and Exa servers using environment variable
-references (`${TAVILY_API_KEY}`, `${EXA_API_KEY}`). The user needs to set these in their
-shell profile. The workflow needs **at least one** of Tavily or Exa to run at all — that
-is the only hard stop in the whole workflow; everything else (Sefaria, CandleKeep,
-NotebookLM) degrades gracefully when absent.
+The plugin prompts for optional Exa and Tavily API keys during install and stores them in the system keychain. Exa works keyless; Tavily MCP uses OAuth when blank. Change the keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only. Never paste keys in chat.
 
 **SECURITY: NEVER ask the user to paste API keys in the chat.**
 
@@ -40,18 +36,7 @@ Then tell them:
 
 ---
 
-The plugin is installed. To enable the `/learn-toolkit:learn` search backends, add your API keys to your shell profile.
-
-**Open your shell profile in your editor** (`~/.zshrc` for zsh, `~/.bashrc` for bash) and add:
-
-```bash
-export TAVILY_API_KEY="your-tavily-key-here"    # Get one free at https://tavily.com
-export EXA_API_KEY="your-exa-key-here"          # Get one at https://exa.ai
-```
-
-Then run `source ~/.zshrc` (or `~/.bashrc`) and restart Claude Code.
-
-**Do not paste your API keys in this chat.** Add them directly to your shell profile.
+The plugin stores optional API keys in the system keychain. Exa search works keyless; Tavily MCP uses OAuth when blank. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; use tvly >= 0.1.8 (`tvly update`). Never paste keys in chat.
 
 ---
 
@@ -66,12 +51,11 @@ The Tavily agent skills give `/learn-toolkit:learn` a CLI-based fallback when th
 **Install the skills and CLI:**
 
 ```bash
-npx skills add tavily-ai/skills --yes
 curl -fsSL https://cli.tavily.com/install.sh | bash
-tvly login
+tvly init --agent claude-code
 ```
 
-The `tvly login` command opens a browser for OAuth, or use `tvly login --api-key` with the same key from Step 2.
+Use `tvly` version 0.1.8 or newer; update with `tvly update`. Run `tvly login` if authentication is needed.
 
 **Check auth with `tvly auth`, not `tvly --status`** — the latter prints a two-part
 banner whose auth line is lost when piped, giving a false negative. `/learn-toolkit:learn`
@@ -131,9 +115,9 @@ Plugin **learn-toolkit** installed. Here's what you have:
 | `/learn-toolkit:learn <subject>` | After setting env vars + restart (at least one of Tavily/Exa) |
 | CandleKeep (optional) | Automatic library scan + end-of-run write offer, if `ck` CLI installed |
 | NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
-| Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`npx skills add` + `tvly login`) |
+| Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`tvly init --agent claude-code`) |
 
-**After env vars + restart:**
+**After installation (keys optional):**
 ```
 /learn-toolkit:learn Kafka event streaming
 ```

@@ -34,7 +34,7 @@ Exa — describe the ideal page:
 Tavily:
 
 ```bash
-tvly search "<subject> Stanford Encyclopedia of Philosophy overview" --depth advanced --max-results 6 --json
+tvly search "<subject> Stanford Encyclopedia of Philosophy overview" --depth advanced --chunks-per-source 3 --max-results 6 --json -o "$OUT/overview.json"
 ```
 
 ## Output Settings

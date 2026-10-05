@@ -18,16 +18,13 @@ claude plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
 This installs the single skill and configures MCP servers automatically:
-- `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]`
+- `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]`
   — domain-aware deep research across Tavily, Exa, Sefaria, and CandleKeep, with an
   optional NotebookLM learning package.
 
 ### Step 2: Set up API keys
 
-The plugin's `.mcp.json` configures Tavily and Exa servers using environment variable
-references (`${TAVILY_API_KEY}`, `${EXA_API_KEY}`). The user needs to set these in their
-shell profile. At least one of Tavily or Exa must be configured — that is the only hard
-stop in the workflow.
+Install prompts for both optional API keys and stores them in the system keychain. Change them later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Exa works keyless; Tavily MCP uses OAuth when its key is blank. At least one search backend must be available.
 
 **SECURITY: NEVER ask the user to paste API keys in the chat.**
 
@@ -40,33 +37,21 @@ Then tell them:
 
 ---
 
-The plugin is installed. To enable `/learn-toolkit:learn`'s search backends, add your
-API keys to your shell profile.
+The plugin prompts for optional Exa and Tavily keys during installation and stores them in the system keychain. Leave either blank if you prefer Exa keyless access, Tavily OAuth, or the `tvly` CLI. Change keys later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive installation with `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-**Open your shell profile in your editor** (`~/.zshrc` for zsh, `~/.bashrc` for bash) and
-add:
-
-```bash
-export TAVILY_API_KEY="your-tavily-key-here"    # Get one free at https://tavily.com
-export EXA_API_KEY="your-exa-key-here"          # Get one at https://exa.ai
-```
-
-Then run `source ~/.zshrc` (or `~/.bashrc`) and restart Claude Code.
-
-**Do not paste your API keys in this chat.** Add them directly to your shell profile.
+**Do not paste your API keys in this chat.**
 
 ---
 
-If the user doesn't have API keys for either backend, `/learn-toolkit:learn` will stop
-at Phase 0 with setup instructions for both — no other missing tool stops the workflow,
-only zero search backends.
+Exa works keyless; Tavily MCP uses OAuth when its key is blank. The Tavily CLI is an alternative backend.
 
 ### Step 2a: Verify Tavily CLI auth (if the user installs the CLI)
 
 ```bash
 curl -fsSL https://cli.tavily.com/install.sh | bash
-tvly login    # opens browser for OAuth, or: tvly login --api-key tvly-YOUR_KEY
+tvly init --agent claude-code
 ```
+Use `tvly` 0.1.8 or newer; upgrade with `tvly update`.
 
 The workflow checks CLI authentication with:
 
@@ -80,19 +65,9 @@ in.
 
 ### Step 2b: Exa tool set
 
-The bundled `.mcp.json` already enables the canonical tool set on the Exa MCP
-connection — nothing for the user to configure:
-
-```
-web_search_exa, web_search_advanced_exa, get_code_context_exa, web_fetch_exa,
-company_research_exa, people_search_exa, linkedin_search_exa, deep_search_exa
-```
-
-The workflow itself calls `web_search_advanced_exa` and `get_code_context_exa` for
-research, plus `linkedin_search_exa` for the `tech` domain's community subagent (no
-extra credentials needed beyond the Exa key). It never uses any Exa crawling tool or
-multi-step deep-research tool — do not suggest those in any config or guidance given to
-the user for this plugin.
+The Exa MCP connection enables `web_search_exa`, `web_fetch_exa`, and
+`web_search_advanced_exa`. A separate Exa Agent connection exposes `agent_run` for
+optional `--deep` research and requires an Exa key. Exa search works keyless at a lower rate limit.
 
 ### Step 3: NotebookLM (optional)
 
@@ -126,15 +101,15 @@ Tell the user:
 
 ---
 
-Plugin **learn-toolkit** (v2.0.0) installed. Here's what you have:
+Plugin **learn-toolkit** (v2.2.0) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|
-| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook]` | After setting env vars + restart |
+| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]] [--deep[=high\|xhigh]]` | After plugin configuration (optional) |
 | CandleKeep (optional) | Library scan + field-research offer, no flags needed | If `ck` CLI installed |
 | NotebookLM (optional) | Notebook + artifact package, or skip with `--no-notebook` | If `notebooklm-mcp` configured |
 
-**After env vars + restart:**
+**After installation (keys optional):**
 ```
 /learn-toolkit:learn Kafka event streaming
 /learn-toolkit:learn hilchot shabbat candle lighting --domain judaism

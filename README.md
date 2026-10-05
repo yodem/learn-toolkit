@@ -6,7 +6,7 @@ concept, or a Jewish text with domain-aware research routing across Tavily, Exa,
 Sefaria, and CandleKeep, and an optional NotebookLM learning package.
 
 ```
-/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]
 ```
 
 Full documentation — domains, backends, setup, flags, examples, output layout, and API
@@ -23,17 +23,7 @@ key safety — lives in the plugin itself:
 ```
 
 This registers the marketplace, installs the `learn-toolkit` plugin, and configures its
-MCP servers (Tavily, Exa) via environment-variable references — no secrets touch any
-config file.
-
-Then add your API keys to your shell profile (`~/.zshrc` or `~/.bashrc`):
-
-```bash
-export TAVILY_API_KEY="your-key-here"   # https://tavily.com (free)
-export EXA_API_KEY="your-key-here"      # https://exa.ai
-```
-
-Restart Claude Code. `/learn-toolkit:learn` needs at least one of Tavily or Exa to run;
+MCP servers (Tavily, Exa, and Exa Agent) with optional sensitive keys stored in the system keychain. Installation prompts for both keys; Exa search works keyless and Tavily MCP uses OAuth when blank. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only. Never paste keys in chat. `/learn-toolkit:learn` needs at least one of Tavily or Exa to run;
 everything else (Sefaria, CandleKeep, NotebookLM) is optional. See the plugin README for
 what degrades when each is absent.
 
@@ -51,10 +41,7 @@ cp plugins/learn-toolkit/skills/learn/SKILL.md ~/.claude/skills/learn/SKILL.md
 cp -r plugins/learn-toolkit/skills/learn/references/* ~/.claude/skills/learn/references/
 ```
 
-Then configure the `tavily` and `exa` MCP servers in `~/.claude/settings.json` — copy the
-entries from [`plugins/learn-toolkit/.mcp.json`](plugins/learn-toolkit/.mcp.json)
-verbatim, since it already carries the canonical Exa `tools=` list. Add your API keys to
-your shell profile as in Option A, then restart Claude Code.
+Then configure the `tavily`, `exa`, and `exa-agent` MCP servers in `~/.claude/settings.json` — copy entries from [`plugins/learn-toolkit/.mcp.json`](plugins/learn-toolkit/.mcp.json). Configure sensitive keys through plugin userConfig where possible; never paste keys in chat.
 
 </details>
 
@@ -66,9 +53,9 @@ learn-toolkit/                                  # Repository root — marketplac
 │   └── marketplace.json                        # Marketplace catalog for /plugin install
 ├── README.md                                   # This file
 ├── LICENSE
-└── plugins/learn-toolkit/                      # The installable plugin (v2.1.0)
+└── plugins/learn-toolkit/                      # The installable plugin (v2.2.0)
     ├── .claude-plugin/plugin.json               # Plugin manifest
-    ├── .mcp.json                                # MCP servers (Tavily, Exa) with ${ENV_VAR} refs
+    ├── .mcp.json                                # MCP servers (Tavily, Exa, Exa Agent) with sensitive userConfig headers
     ├── hooks/                                   # Output/artifact validation hooks
     ├── references/setup-guide.md                # AI-assistant install walkthrough
     ├── README.md                                # Full plugin documentation — start here
