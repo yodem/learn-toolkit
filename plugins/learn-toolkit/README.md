@@ -7,7 +7,7 @@ NotebookLM learning package (podcast, infographic, mind map, flashcards, study g
 and offers to file the session into a CandleKeep field-research book.
 
 ```
-/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook]
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]
 ```
 
 ## Install
@@ -17,15 +17,9 @@ and offers to file the session into a CandleKeep field-research book.
 /plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
-Then add your API keys to your shell profile (`~/.zshrc` or `~/.bashrc`):
+Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-```bash
-export TAVILY_API_KEY="your-key-here"   # https://tavily.com (free)
-export EXA_API_KEY="your-key-here"      # https://exa.ai
-```
-
-Restart Claude Code. The plugin's `.mcp.json` picks the keys up automatically via
-`${TAVILY_API_KEY}` / `${EXA_API_KEY}` references — nothing else to configure.
+For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily or Exa to run at all; everything else
 (Sefaria, CandleKeep, NotebookLM) is optional and degrades gracefully when absent. See
@@ -89,7 +83,8 @@ resolved domain's file in full before dispatching any research.
 | Backend | Required? | What it's for | If missing |
 |---------|-----------|----------------|------------|
 | Tavily | One of Tavily/Exa required | General web search, official docs, community discussion | If Exa is also missing, the workflow **stops** before Phase 0.5 with setup instructions — the only hard stop in the whole workflow |
-| Exa | One of Tavily/Exa required | Code-aware search (`get_code_context_exa`), broader web search (`web_search_advanced_exa`), and — for `tech` — practitioner discussion on LinkedIn (`linkedin_search_exa`) | Same as above |
+| Exa | One of Tavily/Exa required | `web_search_exa`, `web_fetch_exa`, and targeted `web_search_advanced_exa` | Same as above |
+| Exa Agent | Optional; key required | Opt-in `agent_run` research with `--deep` | Use Tavily research or skip deep results |
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
 | CandleKeep | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the CandleKeep offer are unaffected |
@@ -109,19 +104,18 @@ zero available search backends (both Tavily and Exa missing).
 
 ### Exa tools
 
-The plugin's `.mcp.json` enables this tool set on the Exa MCP connection:
+| Tool | Use |
+|------|-----|
+| `web_search_exa` | Quick broad searches and code examples |
+| `web_fetch_exa` | Fetch selected source pages with a character limit |
+| `web_search_advanced_exa` | Targeted search with categories, domain filters, date windows, and highlights |
+| `agent_run` | Optional deep research, only when `--deep` is passed; requires an Exa key |
 
-```
-web_search_exa, web_search_advanced_exa, get_code_context_exa, web_fetch_exa,
-company_research_exa, people_search_exa, linkedin_search_exa, deep_search_exa
-```
+The former specialized Exa search tools and retired categories are no longer supported by this plugin. Search works keyless; Agent requires an Exa key.
 
-The workflow itself only actively calls `web_search_advanced_exa` and
-`get_code_context_exa` for research fan-out, plus `linkedin_search_exa` for the `tech`
-domain's community subagent (it needs no credentials beyond your Exa key — just a
-different Exa endpoint). Subagents are told explicitly not to fall back to any other Exa
-tool they happen to discover via their own tool search, including any crawling or
-multi-step deep-research tool — those are not part of this workflow.
+### Deep research (`--deep`)
+
+`--deep` opts into Exa Agent with medium effort by default. Set `--deep=low|medium|high|xhigh` to choose the effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
 
 ### CandleKeep
 
@@ -151,16 +145,13 @@ tvly login                                 # opens browser for OAuth
 # or: tvly login --api-key tvly-YOUR_KEY
 ```
 The workflow checks CLI auth with `tvly auth` (not `tvly --status`, whose two-part
-banner drops the auth line when piped).
+banner drops the auth line when piped). Use `tvly` >= 0.1.8; update with `tvly update`.
 
-**Option B — MCP server:** `export TAVILY_API_KEY="your-key"` in your shell profile,
-then restart Claude Code. The bundled `.mcp.json` picks it up.
+**Option B — MCP server:** enter the key through `/plugin configure learn-toolkit@learn-toolkit-marketplace`. A blank Tavily key leaves the MCP unusable; use the `tvly` CLI or configure the key.
 
 ### Exa
 
-`export EXA_API_KEY="your-key"` in your shell profile (get a key at
-[exa.ai](https://exa.ai)), `source` it, then restart Claude Code — the Exa MCP server
-reads keys at startup.
+Exa search works keyless. To increase its rate limit and enable `--deep`, set the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` and reload plugins or restart Claude Code.
 
 ### Sefaria (optional, `judaism` only)
 
@@ -187,9 +178,8 @@ nlm login
   not in file contents.
 - If you accidentally paste a key into the chat, **rotate it immediately** at the
   provider (Tavily, Exa, etc.) — treat it as compromised the moment it's been typed.
-- Keys live only as `${ENV_VAR}` references in `.mcp.json` (`${TAVILY_API_KEY}`,
-  `${EXA_API_KEY}`), resolved at runtime from your shell environment. The config file
-  itself never contains a literal key and is safe to commit or share.
+- Keys live only in sensitive plugin `userConfig`, stored in the system keychain and
+  passed as MCP headers. Change them with `/plugin configure learn-toolkit@learn-toolkit-marketplace`.
 
 ## Examples
 
@@ -235,8 +225,8 @@ hit.
 ```
 learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
-│   └── plugin.json                            # Plugin manifest (name, version 2.1.0)
-├── .mcp.json                                   # MCP servers (Tavily, Exa) with ${ENV_VAR} refs
+│   └── plugin.json                            # Plugin manifest (name, version 2.2.0)
+├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent); keys from userConfig
 ├── hooks/
 │   ├── hooks.json
 │   ├── validate-output.sh

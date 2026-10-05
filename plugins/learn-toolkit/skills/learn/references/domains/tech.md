@@ -11,10 +11,11 @@ discussion rather than in a text tradition.
 Four subagents, dispatched in one message:
 
 1. **docs** — Tavily, official documentation and specifications.
-2. **code** — Exa `get_code_context_exa`, plus `web_search_advanced_exa` with `category: "github"`.
-3. **community** — Tavily with `include_domains: ["reddit.com","news.ycombinator.com","stackoverflow.com"]`,
-   plus Exa `web_search_advanced_exa` with `category: "personal site"`, plus `linkedin_search_exa`
-   for practitioners writing about the subject.
+2. **code** — Exa `web_search_exa` for code examples and `web_search_advanced_exa` with
+   `includeDomains: ["github.com"]` and a query describing the ideal repository or README.
+3. **community** — Tavily with `--include-domains reddit.com,news.ycombinator.com,stackoverflow.com
+   --time-range year`, plus Exa `web_search_advanced_exa` with `category: "personal site"` for
+   practitioner write-ups.
 4. **library** — CandleKeep (see `../candlekeep-integration.md`).
 
 ## Source Ranking
@@ -25,9 +26,12 @@ official docs > source code / repos > library (CandleKeep) > practitioner discus
 
 Tavily — one focused query per subagent, recency via parameter, never via query text:
 
+`$OUT` is the subagent's own `mktemp -d` directory (see SKILL.md Phase 1); paste its
+literal path.
+
 ```bash
-tvly search "<subject> official documentation" --depth advanced --max-results 6 --json
-tvly search "<subject> production issues" --time-range year --include-domains reddit.com,news.ycombinator.com --max-results 6 --json
+tvly search "<subject> official documentation" --depth advanced --chunks-per-source 3 --max-results 6 --json -o "$OUT/docs.json"
+tvly search "<subject> production issues" --depth advanced --chunks-per-source 3 --time-range year --include-domains reddit.com,news.ycombinator.com --max-results 6 --json -o "$OUT/community.json"
 ```
 
 Exa — describe the ideal page, never keywords:
@@ -36,6 +40,8 @@ Exa — describe the ideal page, never keywords:
 - BAD: `"<subject> production tradeoffs"`
 - GOOD: `"official reference documentation for <subject> configuration options"`
 - BAD: `"<subject> documentation"`
+- GOOD: `"well-maintained GitHub repository with a README showing a minimal <subject> example"`
+- BAD: `"<subject> github"`
 
 ## Output Settings
 
