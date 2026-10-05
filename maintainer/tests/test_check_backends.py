@@ -97,5 +97,41 @@ class LintShell(unittest.TestCase):
             self.assertIsNone(shutil.which("rg", path=env["PATH"]))
 
 
+class ReviewFixes(unittest.TestCase):
+    def test_registry_parser_tolerates_reformatting(self):
+        ts = 'export const R = {\n    web_search_v2_exa: {\n      group: "search",\n      name: "Web Search",\n    },\n    old_exa: {\n      name: "Old (Deprecated)",\n    },\n};\n'
+        current, deprecated = cb.parse_exa_registry(ts)
+        self.assertEqual(current, {"web_search_v2_exa"})
+        self.assertEqual(deprecated, {"old_exa"})
+
+    def test_unrecognised_registry_is_probe_error(self):
+        def fetch(url, headers=None, body=None):
+            return 200, "nothing parseable here", {}
+        self.assertEqual(cb.exit_code(cb.run(fetch=fetch, offline=False)), 3)
+
+    def test_malformed_snapshot_is_probe_error(self):
+        original = cb.SNAPSHOT
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bad = pathlib.Path(temp_dir) / "snap.json"
+            bad.write_text("{ not json", encoding="utf-8")
+            cb.SNAPSHOT = bad
+            try:
+                self.assertEqual(cb.exit_code(cb.run(fetch=None, offline=True)), 3)
+            finally:
+                cb.SNAPSHOT = original
+
+    def test_lint_flags_deprecated_category_without_tool_name(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            plugin = pathlib.Path(temp_dir) / "plugin"
+            shutil.copytree(ROOT, plugin)
+            tech = plugin / "skills" / "learn" / "references" / "domains" / "tech.md"
+            with tech.open("a", encoding="utf-8") as stream:
+                stream.write('\nSearch with "category": "github" for repos.\n')
+            result = subprocess.run(["/bin/bash", str(plugin / "scripts" / "lint-skill.sh")],
+                                    capture_output=True, text=True, check=False)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("deprecated Exa category `github`", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

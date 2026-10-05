@@ -45,10 +45,15 @@ def http_fetch(url, headers=None, body=None):
 
 
 def parse_exa_registry(ts):
-    """Return current and deprecated tool IDs from the Exa registry."""
+    """Return current and deprecated tool IDs from the Exa registry.
+
+    Tolerant of indentation, digits in ids and field order: each `id: {` block is scanned
+    for its `name:` string up to the block's closing brace."""
     current, deprecated = set(), set()
-    for tool, name in re.findall(r'^\s{2}([a-z_]+):\s*\{\s*name:\s*"([^"]+)"', ts, re.M):
-        (deprecated if "deprecated" in name.lower() else current).add(tool)
+    for match in re.finditer(r'^\s*([a-z][a-z0-9_]*)\s*:\s*\{(.*?)^\s*\},?\s*$', ts, re.M | re.S):
+        name = re.search(r'\bname\s*:\s*["\']([^"\']+)["\']', match.group(2))
+        if name:
+            (deprecated if "deprecated" in name.group(1).lower() else current).add(match.group(1))
     return current, deprecated
 
 
@@ -143,11 +148,25 @@ def _get_links(text):
     return sorted(set(re.findall(r'\]\((https?://[^)]+)\)', text)))
 
 
+def load_snapshot():
+    """The stored snapshot; a missing or malformed file is a local fault (ProbeError), not drift."""
+    empty = {"versions": {}, "exa_known_tools": [], "tavily_tools": [], "doc_links": {}}
+    if not SNAPSHOT.exists():
+        return empty
+    try:
+        snapshot = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ProbeError(f"snapshot unreadable: {exc}") from exc
+    if not isinstance(snapshot, dict) or not set(empty) <= set(snapshot):
+        raise ProbeError("snapshot is missing required keys " + ", ".join(sorted(empty)))
+    return snapshot
+
+
 def run(fetch=http_fetch, offline=False):
-    snapshot = json.loads(SNAPSHOT.read_text(encoding="utf-8")) if SNAPSHOT.exists() else {
-        "versions": {}, "exa_known_tools": [], "tavily_tools": [], "doc_links": {}}
+    snapshot = {}
     findings = []
     try:
+        snapshot = load_snapshot()
         lint = subprocess.run(["bash", str(ROOT / "scripts/lint-skill.sh")], capture_output=True, text=True)
         if lint.returncode:
             findings.append({"severity": "breaking", "check": "static-lint", "detail": "lint-skill.sh failed"})
@@ -157,6 +176,8 @@ def run(fetch=http_fetch, offline=False):
         if registry_status != 200:
             raise ProbeError(f"Exa registry returned HTTP {registry_status}")
         current, deprecated = parse_exa_registry(registry_text)
+        if len(current) + len(deprecated) < 3:
+            raise ProbeError("Exa registry format not recognised (parsed fewer than 3 tools)")
         used = used_exa_tools(ROOT / ".mcp.json")
         findings.extend(compare_exa(used, current, deprecated, snapshot.get("exa_known_tools", [])))
         config = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]

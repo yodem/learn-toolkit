@@ -680,7 +680,9 @@ for dirpath, dirnames, filenames in os.walk(root):
                 text = fh.read()
         except (OSError, UnicodeDecodeError):
             continue
-        if not any(tool in text for tool in TOOLS):
+        has_tool = any(tool in text for tool in TOOLS)
+        has_category = fname.endswith(".md") and re.search(r'category', text, re.I)
+        if not has_tool and not has_category:
             continue
         lines = text.splitlines()
         is_md = fname.endswith(".md")
@@ -703,7 +705,7 @@ for dirpath, dirnames, filenames in os.walk(root):
                     )
         if fname.endswith(".md"):
             for category in CATEGORIES:
-                for match in re.finditer(r'category\s*:\s*["\']?' + re.escape(category) + r'\b', text, re.I):
+                for match in re.finditer(r'["\']?category["\']?\s*[:=]\s*["\']?' + re.escape(category) + r'\b', text, re.I):
                     line_no = text.count("\n", 0, match.start()) + 1
                     if not PROHIBITION_RE.search(line_to_para.get(line_no, lines[line_no - 1])):
                         findings.append(f"{full}:{line_no}: deprecated Exa category `{category}` without prohibition wording")
