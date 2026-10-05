@@ -65,6 +65,16 @@ if [[ ! -f "${SKILL_MD}" ]]; then
   exit 1
 fi
 
+# Checks below rely on Python for structured file checks and grep for the
+# server-prefix guard. Catch missing tools before command substitutions can
+# turn "command not found" into empty output that looks like a clean result.
+for required_tool in python3 grep; do
+  if ! command -v "${required_tool}" >/dev/null 2>&1; then
+    echo "FAIL: dependencies — required command '${required_tool}' not found"
+    exit 1
+  fi
+done
+
 # --------------------------------------------------------------------------
 # Check 1: undefined variable references in SKILL.md
 # --------------------------------------------------------------------------
@@ -797,7 +807,14 @@ PYEOF
 # Check 9: plugin skill files use suffix matching, not server prefixes
 # --------------------------------------------------------------------------
 check9_no_hardcoded_mcp_prefix() {
-  rg -n 'mcp__(exa|exa-agent|tavily)__' "${SKILL_MD}" "${SKILL_DIR}/references/domains" || true
+  local output status
+  status=0
+  output=$(grep -REn 'mcp__(exa|exa-agent|tavily)__' "${SKILL_MD}" "${SKILL_DIR}/references/domains") || status=$?
+  case "${status}" in
+    0) printf '%s\n' "${output}" ;;
+    1) ;;
+    *) echo "grep failed with exit ${status} while checking for hardcoded MCP prefixes" ;;
+  esac
 }
 
 # --------------------------------------------------------------------------
