@@ -200,6 +200,23 @@ The checker exits `0` when clean, `1` for breaking drift, `2` for informational
 drift, and `3` when a probe cannot run. `--json` prints a machine-readable report
 with `status`, `findings`, and `snapshot` for automation.
 
+### Weekly drift job
+
+On the dev server, a cron entry runs Mondays at 06:00 UTC. It checks the current
+backend integrations and stores each report and review under
+`~/scripts/learn-toolkit-check/<date>/`. Clean runs only log their result. Drift
+runs propose changes on `backend-drift/*` branches and open draft PRs; the job
+never pushes to `main`. Telegram notifications report probe errors and drift.
+
+Run a safe dry run with:
+
+```bash
+DRY_RUN=1 CHECK_REF=wip/backend-check bash ~/scripts/learn-toolkit-weekly-check.sh
+```
+
+Disable the schedule with `crontab -e` by removing the
+`learn-toolkit-weekly-check.sh` line.
+
 ## Examples
 
 ```bash
