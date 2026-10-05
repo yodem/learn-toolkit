@@ -93,7 +93,7 @@ class LintShell(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("FAIL: no-hardcoded-mcp-prefix", result.stdout)
-            self.assertNotIn("rg", env["PATH"])
+            self.assertIsNone(shutil.which("rg", path=env["PATH"]))
 
 
 if __name__ == "__main__":
