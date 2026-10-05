@@ -181,6 +181,12 @@ nlm login
 - Keys live only in sensitive plugin `userConfig`, stored in the system keychain and
   passed as MCP headers. Change them with `/plugin configure learn-toolkit@learn-toolkit-marketplace`.
 
+## Keeping the backends current
+
+Run `bash plugins/learn-toolkit/scripts/lint-skill.sh` to check skill references,
+deprecated Exa tools and categories, MCP server configuration, sensitive key
+configuration, and Exa tool agreement across all configured Exa servers.
+
 ## Examples
 
 ```bash
