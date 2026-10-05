@@ -18,7 +18,7 @@ claude plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
 This installs the single skill and configures MCP servers automatically:
-- `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]`
+- `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]`
   — domain-aware deep research across Tavily, Exa, Sefaria, and CandleKeep, with an
   optional NotebookLM learning package.
 
@@ -105,7 +105,7 @@ Plugin **learn-toolkit** (v2.2.0) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|
-| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]] [--deep[=high\|xhigh]]` | After plugin configuration (optional) |
+| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=low\|medium\|high\|xhigh]]` | After plugin configuration (optional) |
 | CandleKeep (optional) | Library scan + field-research offer, no flags needed | If `ck` CLI installed |
 | NotebookLM (optional) | Notebook + artifact package, or skip with `--no-notebook` | If `notebooklm-mcp` configured |
 
@@ -128,8 +128,8 @@ automatically; override with `--domain` if the inference is wrong. Language defa
   in file contents.
 - If a user accidentally pastes a key, tell them to **rotate it immediately** at the
   provider — treat it as compromised the moment it was typed.
-- The plugin bundles MCP configs via `.mcp.json` with `${ENV_VAR}` references — no
-  manual `settings.json` editing needed. Keys never appear as literal values in any
-  config file.
+- The plugin bundles MCP configs via `.mcp.json`; keys come from the plugin's `userConfig`
+  (system keychain) as `${user_config.*}` headers. No manual `settings.json` editing, and
+  keys never appear as literal values in any config file.
 - If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to
   manual skill installation using the files in `skills/learn/`.

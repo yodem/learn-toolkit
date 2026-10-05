@@ -115,7 +115,7 @@ The former specialized Exa search tools and retired categories are no longer sup
 
 ### Deep research (`--deep`)
 
-`--deep` opts into Exa Agent with medium effort by default. Set `--deep=high` or `--deep=xhigh` to choose a higher effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
+`--deep` opts into Exa Agent with medium effort by default. Set `--deep=low|medium|high|xhigh` to choose the effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
 
 ### CandleKeep
 
@@ -158,10 +158,6 @@ Exa search works keyless. To increase its rate limit and enable `--deep`, set th
 Configured separately as an MCP server; only matters when the resolved domain is
 `judaism`. If unavailable, the `secondary` subagent (Tavily/Exa) carries more weight —
 Sefaria is never substituted with open-web search for the primary text.
-
-### Deep research (`--deep`)
-
-`--deep` opts into Exa Agent with medium effort by default. Set `--deep=high` or `--deep=xhigh` to choose a higher effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
 
 ### CandleKeep (optional)
 
@@ -230,7 +226,7 @@ hit.
 learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
 │   └── plugin.json                            # Plugin manifest (name, version 2.2.0)
-├── .mcp.json                                   # MCP servers (Tavily, Exa) with ${ENV_VAR} refs
+├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent); keys from userConfig
 ├── hooks/
 │   ├── hooks.json
 │   ├── validate-output.sh

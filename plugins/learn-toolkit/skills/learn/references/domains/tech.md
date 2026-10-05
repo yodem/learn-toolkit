@@ -26,6 +26,9 @@ official docs > source code / repos > library (CandleKeep) > practitioner discus
 
 Tavily — one focused query per subagent, recency via parameter, never via query text:
 
+`$OUT` is the subagent's own `mktemp -d` directory (see SKILL.md Phase 1); paste its
+literal path.
+
 ```bash
 tvly search "<subject> official documentation" --depth advanced --chunks-per-source 3 --max-results 6 --json -o "$OUT/docs.json"
 tvly search "<subject> production issues" --depth advanced --chunks-per-source 3 --time-range year --include-domains reddit.com,news.ycombinator.com --max-results 6 --json -o "$OUT/community.json"

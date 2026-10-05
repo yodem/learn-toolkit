@@ -33,6 +33,9 @@ Exa — describe the ideal page:
 
 Tavily:
 
+`$OUT` is the subagent's own `mktemp -d` directory (see SKILL.md Phase 1); paste its
+literal path.
+
 ```bash
 tvly search "<subject> Stanford Encyclopedia of Philosophy overview" --depth advanced --chunks-per-source 3 --max-results 6 --json -o "$OUT/overview.json"
 ```

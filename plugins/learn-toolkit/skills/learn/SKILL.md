@@ -1,8 +1,8 @@
 ---
 name: learn
 description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and CandleKeep with one subagent per backend, then optionally builds a NotebookLM package and files findings into a CandleKeep field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
-argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]"
-allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
+argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
+allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(mktemp *), Bash(python3 *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
   version: 2.2.0
@@ -171,8 +171,10 @@ the value handed to every subagent in Phase 1 and stored as `"topic"` in the sta
 in Phase 2.
 
 Parse deep mode before deriving the subject: bare `--deep` sets `$DEEP_EFFORT=medium`;
-`--deep=high` and `--deep=xhigh` set the requested effort. Any other value prints the
-allowed values and uses `medium`. Without either flag, leave `$DEEP_EFFORT` unset.
+`--deep=low|medium|high|xhigh` sets that effort. The effort is only read from the
+`--deep=<effort>` form: in `--deep high` the word `high` stays part of the subject. Any other
+`--deep=` value prints the allowed values and uses `medium`. Without the flag, leave
+`$DEEP_EFFORT` unset.
 
 Read `${CLAUDE_SKILL_DIR}/references/domains/$DOMAIN.md` in full before doing anything
 else — it defines the Phase 1 roster, Source Ranking, Query Patterns, and Output
@@ -206,7 +208,7 @@ fan-out, not a sequence). For each subagent, hand it:
 enforce):**
 
 ```json
-[{"url": "...", "title": "...", "kind": "official_docs|tutorial|discussion|library|primary_text",
+[{"url": "...", "title": "...", "kind": "official_docs|tutorial|discussion|library|primary_text|deep_research",
   "why_it_matters": "one sentence", "key_claims": ["...", "..."]}]
 ```
 
@@ -217,8 +219,10 @@ accumulating every subagent's raw exploration.
 
 **Token-economy rules — include in every subagent's prompt:**
 
-- Tavily CLI subagents run `tvly search … --json -o "$(mktemp -d)/r.json"` and read the
-  file through a Python filter (the `tavily-dynamic-search` pattern). Use
+- Tavily CLI subagents first run `mktemp -d` in its own Bash call and keep the printed
+  path as `OUT=<printed path>` (shell variables do not survive between tool calls, so paste the literal
+  path into every later command). They run `tvly search … --json -o "$OUT/<name>.json"`
+  and read that file through a Python filter (the `tavily-dynamic-search` pattern). Use
   `--depth advanced --chunks-per-source 3` for research and `--depth fast` for quick
   checks. Extract keepers with `tvly extract <url> --query "<subject>"
   --chunks-per-source 3 --json`. A `tvly` exit code 3 means auth: return
@@ -251,8 +255,10 @@ This is Phase 1b; it runs after the regular search fan-out.
 Skip silently unless `$DEEP_EFFORT` is set. If `HAS_EXA_AGENT` is false and
 both `HAS_TAVILY_SKILLS` and `HAS_TAVILY_CLI_AUTH` are true, use the CLI fallback:
 `tvly research "<question>" --model pro --citation-format numbered --no-wait
---output-schema '{"type":"object","required":["answer"],"properties":{"answer":{"type":"string"}}}' --json`,
-then poll with `tvly research poll <request_id> --json` until `completed` or `failed`.
+--output-schema '<the outputSchema below>' --json`, then poll with
+`tvly research poll <request_id> --json` every 30 seconds, at most 10 times, until
+`completed` or `failed`; past the cap, report the request ID and continue without deep
+results.
 If `HAS_EXA_AGENT` is false and the authenticated Tavily CLI fallback is unavailable,
 print one notice: `--deep` needs an Exa key — run
 `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then continue.
@@ -272,16 +278,19 @@ If `agent_run` returns `status: "running"` with an `id`, call it again with
 the run ID as the `runId` argument (at most 6 re-calls). Read `output` only when status
 is `completed`.
 On `failed`, `cancelled`, or the poll cap, report the degraded run in the matrix and
-continue without deep results. Map each finding to a `deep_research` digest, taking URLs
-from `output.grounding[].citations[]` for that field; drop findings without a grounded
-citation. Save the run ID in state as `deep_run_id`; a follow-up deep run may pass it as
-`previousRunId`.
+continue without deep results. Map each finding to a `deep_research` digest. For Exa,
+take its URLs from `output.grounding[].citations[]` for that field; for Tavily, take them
+from the response's `sources[]`. Drop a finding only when the run returned no citations or
+sources at all. Keep the run ID as `DEEP_RUN_ID=<run id>`; Phase 2 writes it to the state file as
+`deep_run_id`, and a follow-up deep run may pass it as `previousRunId`.
 
 ### Phase 2: Merge and Synthesize
 
 1. Collect every subagent's digest array. Deduplicate by URL (library/primary-text
    entries dedupe by id instead).
-2. Rank by the resolved domain's `## Source Ranking` order.
+2. Rank by the resolved domain's `## Source Ranking` order. A `deep_research` entry takes
+   the tier of its cited source; when that is unclear, rank it just below the domain's
+   first tier.
 3. Write a synthesis of at least ~500 words (~3000 characters — the validation hook
    warns below 2500), drawing only from the digests' `why_it_matters` and `key_claims`,
    not from re-fetching pages. It has one section per tier of the
@@ -300,7 +309,7 @@ citation. Save the run ID in state as `deep_run_id`; a follow-up deep run may pa
    findings, so it must be present from the start:
 
 ```bash
-echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
+echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"deep_run_id\":\"${DEEP_RUN_ID:-}\",\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
 ```
 
 `$TOPIC_SLUG` is the subject lowercased, spaces to hyphens, special characters removed.
