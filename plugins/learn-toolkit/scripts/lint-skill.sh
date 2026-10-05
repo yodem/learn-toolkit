@@ -672,7 +672,7 @@ for dirpath, dirnames, filenames in os.walk(root):
     dirnames[:] = [d for d in dirnames if d != ".git"]
     for fname in sorted(filenames):
         rel = os.path.relpath(os.path.join(dirpath, fname), root).replace(os.sep, "/")
-        if fname == self_name or rel.startswith("tests/") or rel == "scripts/check-backends.py":
+        if fname == self_name:
             continue
         full = os.path.join(dirpath, fname)
         try:

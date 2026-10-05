@@ -12,8 +12,9 @@ import urllib.error
 import urllib.request
 from urllib.parse import parse_qs, urlparse
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-SNAPSHOT = ROOT / "scripts" / "backend-snapshot.json"
+HERE = pathlib.Path(__file__).resolve().parent
+ROOT = HERE.parent / "plugins" / "learn-toolkit"  # the plugin being checked
+SNAPSHOT = HERE / "backend-snapshot.json"
 UA = "learn-toolkit-check/1.0"
 EXA_REGISTRY = "https://raw.githubusercontent.com/exa-labs/exa-mcp-server/main/src/toolRegistry.ts"
 TAVILY_MCP = "https://mcp.tavily.com/mcp/"

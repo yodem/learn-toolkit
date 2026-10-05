@@ -6,3 +6,4 @@ skills-lock.json
 *.env
 .academic-helper/
 .academic-writer/
+__pycache__/

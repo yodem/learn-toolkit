@@ -7,11 +7,12 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("cb", ROOT / "scripts" / "check-backends.py")
+MAINT = pathlib.Path(__file__).resolve().parents[1]
+ROOT = MAINT.parent / "plugins" / "learn-toolkit"
+spec = importlib.util.spec_from_file_location("cb", MAINT / "check-backends.py")
 cb = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cb)
-REG = (ROOT / "tests" / "fixtures" / "toolRegistry.ts").read_text(encoding="utf-8")
+REG = (MAINT / "tests" / "fixtures" / "toolRegistry.ts").read_text(encoding="utf-8")
 
 
 class Registry(unittest.TestCase):
@@ -61,7 +62,7 @@ class ExitCodes(unittest.TestCase):
 
 class NoSecrets(unittest.TestCase):
     def test_script_never_reads_api_keys(self):
-        src = (ROOT / "scripts" / "check-backends.py").read_text(encoding="utf-8")
+        src = (MAINT / "check-backends.py").read_text(encoding="utf-8")
         self.assertNotIn("API_KEY", src)
 
 

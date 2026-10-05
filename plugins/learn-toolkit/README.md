@@ -185,16 +185,7 @@ nlm login
 
 Run `bash plugins/learn-toolkit/scripts/lint-skill.sh` to check skill references,
 deprecated Exa tools and categories, MCP server configuration, sensitive key
-configuration, and Exa tool agreement across all configured Exa servers. The
-stdlib-only `python3 plugins/learn-toolkit/scripts/check-backends.py` also compares
-live Exa and Tavily MCP tools, the Exa registry, published package versions, and
-documentation indexes against `scripts/backend-snapshot.json`. Use `--offline` for
-the static checks and `--update-snapshot` to accept the current live versions, tools,
-and documentation links.
-
-The checker exits `0` when clean, `1` for breaking drift, `2` for informational
-drift, and `3` when a probe cannot run. `--json` prints a machine-readable report
-with `status`, `findings`, and `snapshot` for automation.
+configuration, and Exa tool agreement across all configured Exa servers.
 
 ## Examples
 
