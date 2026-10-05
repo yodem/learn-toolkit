@@ -25,7 +25,7 @@ SETUP_GUIDE="${PLUGIN_ROOT}/references/setup-guide.md"
 
 FINDINGS=0
 PASSED=0
-TOTAL_CHECKS=7
+TOTAL_CHECKS=10
 
 fail_line() {
   local check="$1" detail="$2"
@@ -509,20 +509,19 @@ except (OSError, json.JSONDecodeError) as exc:
     print(f".mcp.json could not be parsed: {exc}")
     sys.exit(0)
 
-exa_url = None
+exa_urls = []
 for _, server in data.get("mcpServers", {}).items():
     url = server.get("url", "")
-    if "exa" in url.lower():
-        exa_url = url
-        break
+    if "mcp.exa.ai" in url.lower():
+        exa_urls.append(url)
 
 allowed = set()
-if exa_url:
+for exa_url in exa_urls:
     qs = parse_qs(urlparse(exa_url).query)
     tools_param = qs.get("tools", [""])[0]
-    allowed = {t.strip() for t in tools_param.split(",") if t.strip()}
+    allowed |= {t.strip() for t in tools_param.split(",") if t.strip()}
 
-tool_re = re.compile(r'(?:mcp__exa__)?([a-z][a-z0-9_]*_exa)\b')
+tool_re = re.compile(r'(?:mcp__exa__|mcp__exa-agent__)?([a-z][a-z0-9_]*_exa|agent_run)\b')
 PROHIBITION_RE = re.compile(r'\b(?:never|no\s+longer|not|deprecated|removed)\b', re.IGNORECASE)
 
 
@@ -608,7 +607,10 @@ import sys
 
 root, self_name = sys.argv[1], sys.argv[2]
 
-TOOLS = ("crawling_exa", "deep_researcher_start", "deep_researcher_check")
+TOOLS = ("get_code_context_exa", "company_research_exa", "people_search_exa",
+         "linkedin_search_exa", "deep_search_exa", "crawling_exa",
+         "deep_researcher_start", "deep_researcher_check")
+CATEGORIES = ("github", "pdf", "tweet", "linkedin", "research paper")
 PROHIBITION_RE = re.compile(r'\b(?:never|no\s+longer|not|deprecated|removed)\b', re.IGNORECASE)
 
 
@@ -659,7 +661,8 @@ findings = []
 for dirpath, dirnames, filenames in os.walk(root):
     dirnames[:] = [d for d in dirnames if d != ".git"]
     for fname in sorted(filenames):
-        if fname == self_name:
+        rel = os.path.relpath(os.path.join(dirpath, fname), root).replace(os.sep, "/")
+        if fname == self_name or rel.startswith("tests/") or rel == "scripts/check-backends.py":
             continue
         full = os.path.join(dirpath, fname)
         try:
@@ -688,6 +691,12 @@ for dirpath, dirnames, filenames in os.walk(root):
                         f"wording (never/not/no longer/deprecated/removed) in "
                         f"{'its paragraph' if is_md else 'that line'}"
                     )
+        if fname.endswith(".md"):
+            for category in CATEGORIES:
+                for match in re.finditer(r'category\s*:\s*["\']?' + re.escape(category) + r'\b', text, re.I):
+                    line_no = text.count("\n", 0, match.start()) + 1
+                    if not PROHIBITION_RE.search(line_to_para.get(line_no, lines[line_no - 1])):
+                        findings.append(f"{full}:{line_no}: deprecated Exa category `{category}` without prohibition wording")
 
 for f in findings:
     print(f)
@@ -759,6 +768,54 @@ PYEOF
 }
 
 # --------------------------------------------------------------------------
+# Check 8: MCP configuration and sensitive userConfig
+# --------------------------------------------------------------------------
+check8_mcp_config() {
+  python3 - "${MCP_JSON}" "${PLUGIN_ROOT}/.claude-plugin/plugin.json" <<'PYEOF'
+import json, re, sys
+mcp_path, plugin_path = sys.argv[1:]
+try:
+    mcp = json.load(open(mcp_path, encoding="utf-8"))
+    plugin = json.load(open(plugin_path, encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"configuration could not be parsed: {exc}"); raise SystemExit(0)
+config = plugin.get("userConfig", {})
+findings = []
+for name, server in mcp.get("mcpServers", {}).items():
+    if server.get("type") != "http": findings.append(f"{name}: type must be http")
+    url = server.get("url", "")
+    if re.search(r"[?&]apiKey=", url, re.I): findings.append(f"{name}: URL must not contain apiKey=")
+    if re.search(r"\$\{[^}]*_API_KEY\}", json.dumps(server)): findings.append(f"{name}: legacy environment API key reference")
+    for key in re.findall(r"\$\{user_config\.([A-Za-z0-9_]+)\}", json.dumps(server)):
+        if key not in config or config[key].get("sensitive") is not True:
+            findings.append(f"{name}: user_config.{key} must be declared sensitive")
+for finding in findings: print(finding)
+PYEOF
+}
+
+# --------------------------------------------------------------------------
+# Check 9: plugin skill files use suffix matching, not server prefixes
+# --------------------------------------------------------------------------
+check9_no_hardcoded_mcp_prefix() {
+  rg -n 'mcp__(exa|exa-agent|tavily)__' "${SKILL_MD}" "${SKILL_DIR}/references/domains" || true
+}
+
+# --------------------------------------------------------------------------
+# Check 10: key advice and agent_run polling contract
+# --------------------------------------------------------------------------
+check10_key_advice_and_agent_polling() {
+  python3 - "${SKILL_MD}" <<'PYEOF'
+import pathlib, re, sys
+text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+findings = []
+if re.search(r"export\s+(?:EXA|TAVILY)_API_KEY", text): findings.append("SKILL.md advises exporting a backend API key")
+if "agent_run" in text and not all(token in text for token in ("runId", "completed")):
+    findings.append("agent_run instructions must poll with runId and wait for completed")
+print("\n".join(findings))
+PYEOF
+}
+
+# --------------------------------------------------------------------------
 # Run all checks
 # --------------------------------------------------------------------------
 report "undefined-vars" "$(check1_undefined_vars)"
@@ -768,6 +825,9 @@ report "exa-tool-agreement" "$(check4_exa_agreement)"
 report "deprecated-tools" "$(check5_deprecated_tools)"
 report "references-exist" "$(check6_references_exist)"
 report "phase-order" "$(check7_phase_order)"
+report "mcp-config" "$(check8_mcp_config)"
+report "no-hardcoded-mcp-prefix" "$(check9_no_hardcoded_mcp_prefix)"
+report "no-env-key-advice-and-agent-run-polling" "$(check10_key_advice_and_agent_polling)"
 
 if [[ "${FINDINGS}" -gt 0 ]]; then
   echo "lint-skill: ${PASSED}/${TOTAL_CHECKS} checks passed, ${FINDINGS} finding(s)"
