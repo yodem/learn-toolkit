@@ -23,7 +23,7 @@ This installs the plugin's one skill and configures MCP servers automatically:
 
 ### Step 2: Set up API keys for /learn (optional but recommended)
 
-The plugin prompts for optional Exa and Tavily API keys during install and stores them in the system keychain. Exa works keyless; Tavily MCP uses OAuth when blank. Change the keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only. Never paste keys in chat.
+The plugin prompts for optional Exa and Tavily API keys during install and stores them in the system keychain. Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change the keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only. Never paste keys in chat.
 
 **SECURITY: NEVER ask the user to paste API keys in the chat.**
 
@@ -36,7 +36,7 @@ Then tell them:
 
 ---
 
-The plugin stores optional API keys in the system keychain. Exa search works keyless; Tavily MCP uses OAuth when blank. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; use tvly >= 0.1.8 (`tvly update`). Never paste keys in chat.
+The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; use tvly >= 0.1.8 (`tvly update`). Never paste keys in chat.
 
 ---
 

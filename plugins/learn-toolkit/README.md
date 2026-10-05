@@ -17,7 +17,7 @@ and offers to file the session into a CandleKeep field-research book.
 /plugin install learn-toolkit@learn-toolkit-marketplace
 ```
 
-Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless; Tavily MCP uses OAuth when its key is blank. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
+Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
 For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. Never paste keys in chat.
 
@@ -147,7 +147,7 @@ tvly login                                 # opens browser for OAuth
 The workflow checks CLI auth with `tvly auth` (not `tvly --status`, whose two-part
 banner drops the auth line when piped). Use `tvly` >= 0.1.8; update with `tvly update`.
 
-**Option B — MCP server:** enter the key through `/plugin configure learn-toolkit@learn-toolkit-marketplace`, or sign in from `/mcp`. Blank config uses OAuth.
+**Option B — MCP server:** enter the key through `/plugin configure learn-toolkit@learn-toolkit-marketplace`. A blank Tavily key leaves the MCP unusable; use the `tvly` CLI or configure the key.
 
 ### Exa
 

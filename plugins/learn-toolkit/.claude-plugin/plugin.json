@@ -30,7 +30,7 @@
     "tavily_api_key": {
       "type": "string",
       "title": "Tavily API key",
-      "description": "From https://app.tavily.com. Leave blank to sign in to the Tavily MCP with OAuth from /mcp, or rely on the tvly CLI (tvly login).",
+      "description": "From https://app.tavily.com. Leave blank to use the tvly CLI; keyless search and extract work without login. Use tvly login or tvly init --agent claude-code for full CLI access.",
       "sensitive": true,
       "required": false
     }

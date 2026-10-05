@@ -94,6 +94,11 @@ Set:
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
 
+If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
+`HAS_TAVILY_MCP=false` and continue with the `tvly` CLI if available. Keyless CLI search
+and extract work without login; `tvly login` or `tvly init --agent claude-code` enables
+full CLI access.
+
 #### Step 0c: CandleKeep CLI
 
 ```bash
@@ -117,8 +122,10 @@ If Tavily is missing:
 > **Tavily is not connected.**
 > **Option A — CLI:** `curl -fsSL https://cli.tavily.com/install.sh | bash`, then
 > `tvly init --agent claude-code` (or `tvly login`).
-> **Option B — MCP:** run `/plugin configure learn-toolkit@learn-toolkit-marketplace`
-> and enter your Tavily key, or sign in from `/mcp` → `plugin:learn-toolkit:tavily`.
+> **Option B — MCP:** enter your key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`.
+> A blank Tavily key leaves the MCP unusable; `/learn` uses the `tvly` CLI (keyless
+> search and extract work without login; `tvly login` or `tvly init --agent claude-code`
+> enables full access).
 > Do not paste your API key in this chat.
 
 > **Exa is not connected.** It works keyless; if it is missing, run `/mcp` and reconnect
@@ -544,6 +551,7 @@ indefinitely or produces a false stale-state warning.
 |-------|-------|--------|
 | Both Tavily and Exa unavailable | Neither MCP nor CLI configured, no keys | **STOP workflow.** Show setup instructions for both. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
 | Tavily CLI auth fails (`tvly auth`) | Not logged in | Ask the user to run `tvly login`; treat as `HAS_TAVILY_SKILLS=false` until fixed |
+| Tavily MCP returns `Invalid Tavily API key` | Tavily key is blank or invalid | Set `HAS_TAVILY_MCP=false`; use `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
 | `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
 | `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |

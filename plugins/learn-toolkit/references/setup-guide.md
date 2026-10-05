@@ -24,7 +24,7 @@ This installs the single skill and configures MCP servers automatically:
 
 ### Step 2: Set up API keys
 
-Install prompts for both optional API keys and stores them in the system keychain. Change them later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Exa works keyless; Tavily MCP uses OAuth when its key is blank. At least one search backend must be available.
+Install prompts for both optional API keys and stores them in the system keychain. Change them later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. At least one search backend must be available.
 
 **SECURITY: NEVER ask the user to paste API keys in the chat.**
 
@@ -37,13 +37,13 @@ Then tell them:
 
 ---
 
-The plugin prompts for optional Exa and Tavily keys during installation and stores them in the system keychain. Leave either blank if you prefer Exa keyless access, Tavily OAuth, or the `tvly` CLI. Change keys later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive installation with `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
+The plugin prompts for optional Exa and Tavily keys during installation and stores them in the system keychain. Leave either blank if you prefer Exa keyless access or the `tvly` CLI. Change keys later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive installation with `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
 **Do not paste your API keys in this chat.**
 
 ---
 
-Exa works keyless; Tavily MCP uses OAuth when its key is blank. The Tavily CLI is an alternative backend.
+Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`.
 
 ### Step 2a: Verify Tavily CLI auth (if the user installs the CLI)
 
