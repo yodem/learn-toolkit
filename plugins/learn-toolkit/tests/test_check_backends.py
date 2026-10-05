@@ -1,6 +1,10 @@
 import importlib.util
 import json
+import os
 import pathlib
+import shutil
+import subprocess
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -59,6 +63,37 @@ class NoSecrets(unittest.TestCase):
     def test_script_never_reads_api_keys(self):
         src = (ROOT / "scripts" / "check-backends.py").read_text(encoding="utf-8")
         self.assertNotIn("API_KEY", src)
+
+
+class LintShell(unittest.TestCase):
+    def test_lint_detects_prefix_when_rg_is_absent_from_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = pathlib.Path(temp_dir)
+            plugin = temp / "plugin"
+            shutil.copytree(ROOT, plugin)
+            skill = plugin / "skills" / "learn" / "SKILL.md"
+            with skill.open("a", encoding="utf-8") as stream:
+                stream.write("\nInjected test prefix: mcp__exa__web_search_exa\n")
+
+            bin_dir = temp / "bin"
+            bin_dir.mkdir()
+            for command in ("python3", "grep", "dirname", "basename"):
+                executable = shutil.which(command)
+                self.assertIsNotNone(executable, f"test host needs {command}")
+                (bin_dir / command).symlink_to(executable)
+
+            env = os.environ.copy()
+            env["PATH"] = str(bin_dir)
+            result = subprocess.run(
+                ["/bin/bash", str(plugin / "scripts" / "lint-skill.sh")],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("FAIL: no-hardcoded-mcp-prefix", result.stdout)
+            self.assertNotIn("rg", env["PATH"])
 
 
 if __name__ == "__main__":
