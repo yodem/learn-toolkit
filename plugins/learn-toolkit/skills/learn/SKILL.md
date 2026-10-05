@@ -60,7 +60,9 @@ tvly auth 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=fa
 ```
 
 Require `tvly` version 0.1.8 or newer. Below that, set `HAS_TAVILY_SKILLS=false` and
-suggest `tvly update`. Set it true only if the version and auth checks pass.
+suggest `tvly update`. Set `HAS_TAVILY_SKILLS=true` when `tvly` is installed at version
+0.1.8 or newer, regardless of authentication. Set `HAS_TAVILY_CLI_AUTH=true` only when
+`tvly auth` passes; otherwise set it false.
 
 #### Step 0b: MCP backends
 
@@ -110,7 +112,7 @@ Set `HAS_CANDLEKEEP`. Missing is not an error.
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
 ```
 
 **The only hard stop in the workflow:** if `HAS_TAVILY` is false AND `HAS_EXA` is false,
@@ -220,7 +222,9 @@ accumulating every subagent's raw exploration.
   `--depth advanced --chunks-per-source 3` for research and `--depth fast` for quick
   checks. Extract keepers with `tvly extract <url> --query "<subject>"
   --chunks-per-source 3 --json`. A `tvly` exit code 3 means auth: return
-  `{"error":"tavily-auth"}` and never run `tvly login`.
+  `{"error":"tavily-auth"}` and never run `tvly login`. Without CLI auth, use only
+  search and extract; do not use crawl, map, or research. Those additional CLI features
+  require authentication.
 - Exa subagents use the discovered full tool names ending in
   `__web_search_advanced_exa`, `__web_search_exa`, and `__web_fetch_exa`. Use advanced
   search for targeted queries (category, domains, date filters, highlights with a
@@ -245,11 +249,12 @@ weakest subagent with a broadened query before proceeding.
 This is Phase 1b; it runs after the regular search fan-out.
 
 Skip silently unless `$DEEP_EFFORT` is set. If `HAS_EXA_AGENT` is false and
-`HAS_TAVILY_SKILLS` is true, use the CLI fallback:
+both `HAS_TAVILY_SKILLS` and `HAS_TAVILY_CLI_AUTH` are true, use the CLI fallback:
 `tvly research "<question>" --model pro --citation-format numbered --no-wait
 --output-schema '{"type":"object","required":["answer"],"properties":{"answer":{"type":"string"}}}' --json`,
 then poll with `tvly research poll <request_id> --json` until `completed` or `failed`.
-If neither is available, print one notice: `--deep` needs an Exa key — run
+If `HAS_EXA_AGENT` is false and the authenticated Tavily CLI fallback is unavailable,
+print one notice: `--deep` needs an Exa key — run
 `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then continue.
 
 Otherwise dispatch one deep subagent using the discovered `agent_run` tool. Its concrete
@@ -541,7 +546,7 @@ indefinitely or produces a false stale-state warning.
 
 `/learn-toolkit:learn WebAssembly component model --deep`
 
-1. Phase 0: Exa search ✓, Exa Agent ✗, Tavily CLI ✓.
+1. Phase 0: Exa search ✓, Exa Agent ✗, Tavily CLI ✓, Tavily CLI auth ✓.
 2. Phase 1 runs normal search. Phase 1b uses Tavily research with numbered citations,
    polls the request to completion, and keeps cited findings in the digest.
 
@@ -550,12 +555,12 @@ indefinitely or produces a false stale-state warning.
 | Error | Cause | Action |
 |-------|-------|--------|
 | Both Tavily and Exa unavailable | Neither MCP nor CLI configured, no keys | **STOP workflow.** Show setup instructions for both. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
-| Tavily CLI auth fails (`tvly auth`) | Not logged in | Ask the user to run `tvly login`; treat as `HAS_TAVILY_SKILLS=false` until fixed |
+| Tavily CLI auth fails (`tvly auth`) | Not logged in | Set `HAS_TAVILY_CLI_AUTH=false`; keep `HAS_TAVILY_SKILLS=true` for search and extract, and ask the user to run `tvly login` for full CLI access |
 | Tavily MCP returns `Invalid Tavily API key` | Tavily key is blank or invalid | Set `HAS_TAVILY_MCP=false`; use `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
 | `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
 | `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |
-| `tvly` exits 3 | Authentication required | Tell the user to run `tvly login` themselves |
+| tvly exits 3 | Authentication required | Set HAS_TAVILY_CLI_AUTH=false, continue with search and extract only, and tell the user to run tvly login themselves |
 | Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; `secondary` subagent (Tavily/Exa) carries more weight; continue |
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
 | NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |
