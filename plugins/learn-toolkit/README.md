@@ -1,10 +1,10 @@
 # learn-toolkit
 
 A single Claude Code skill, `/learn-toolkit:learn`, for deep-diving into a subject.
-It fans research out across Tavily, Exa, Sefaria, and CandleKeep with domain-aware
+It fans research out across Tavily, Exa, Sefaria, and Trove (formerly CandleKeep) with domain-aware
 routing, synthesizes the findings, saves them locally, and optionally builds a
 NotebookLM learning package (podcast, infographic, mind map, flashcards, study guide)
-and offers to file the session into a CandleKeep field-research book.
+and offers to file the session into a Trove field-research book.
 
 ```
 /learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]
@@ -22,7 +22,7 @@ Installation prompts for both optional keys and stores them in the system keycha
 For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily or Exa to run at all; everything else
-(Sefaria, CandleKeep, NotebookLM) is optional and degrades gracefully when absent. See
+(Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
 [Backends](#backends) below.
 
 ## How it routes
@@ -50,12 +50,12 @@ resolved domain's file in full before dispatching any research.
 ## What a run does
 
 1. **Phase 0 — Discover tools.** Checks Tavily (CLI and MCP), Exa MCP, Sefaria MCP,
-   CandleKeep CLI, and NotebookLM MCP. Reports a matrix of what's available.
+   Trove CLI, and NotebookLM MCP. Reports a matrix of what's available.
 2. **Phase 0.5 — Resolve domain and language,** read the domain file, announce the
    routing before spending any research call.
 3. **Phase 1 — Parallel research fan-out.** One subagent per roster entry in the
    resolved domain, dispatched in a single message — including a `library` subagent that
-   scans CandleKeep (see [CandleKeep](#candlekeep) below) unconditionally on every
+   scans Trove (see [Trove](#trove) below) unconditionally on every
    domain. Each subagent returns digests (URL/id, title, kind, why it matters, key
    claims) — never raw page dumps.
 4. **Phase 2 — Merge and synthesize.** Dedupe, rank by the domain's source hierarchy,
@@ -74,9 +74,9 @@ resolved domain's file in full before dispatching any research.
    domain: one HTML page in the same basics → advanced usage → related research order,
    saved as `learning-page.html` in the research folder and published as a Claude Code
    Artifact. Without the Artifact tool the local file is kept and its path reported.
-8. **Phase 7 — CandleKeep field-research offer (optional).** If CandleKeep is
+8. **Phase 7 — Trove field-research offer (optional).** If Trove is
    available, interactively asks whether to file today's findings into a per-topic
-   field-research book. See [CandleKeep](#backends) below.
+   field-research book. See [Trove](#backends) below.
 
 ## Backends
 
@@ -86,8 +86,8 @@ resolved domain's file in full before dispatching any research.
 | Exa | One of Tavily/Exa required | `web_search_exa`, `web_fetch_exa`, and targeted `web_search_advanced_exa` | Same as above |
 | Exa Agent | Optional; key required | Opt-in `agent_run` research with `--deep` | Use Tavily research or skip deep results |
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
-| CandleKeep | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
-| NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the CandleKeep offer are unaffected |
+| Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
+| NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the Trove offer are unaffected |
 
 ### NotebookLM is optional
 
@@ -96,7 +96,7 @@ configured, or you pass `--no-notebook`, phases 3, 4, and 5 skip together and th
 workflow prints exactly one notice:
 
 > NotebookLM not available — skipping the notebook package. Research, local files and
-> the CandleKeep offer are unaffected.
+> the Trove offer are unaffected.
 
 The notebook/artifact tables are simply omitted from the final report; the workflow
 never stops because of this. The **only** hard stop in the entire workflow is having
@@ -117,14 +117,14 @@ The former specialized Exa search tools and retired categories are no longer sup
 
 `--deep` opts into Exa Agent with medium effort by default. Set `--deep=low|medium|high|xhigh` to choose the effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
 
-### CandleKeep
+### Trove
 
-If the `ck` CLI is on your `PATH` (install via the `candlekeep-cloud` plugin),
+If the `trove` CLI is on your `PATH` (install via the `candlekeep-cloud` plugin),
 `/learn-toolkit:learn` will:
 
 - **Scan the library** via the `library` subagent, one of the parallel subagents
   dispatched in Phase 1's fan-out, for existing documents on the topic before
-  synthesizing — this runs unconditionally on every invocation when CandleKeep is
+  synthesizing — this runs unconditionally on every invocation when Trove is
   available, on every domain, and returns a digest like every other backend rather than
   a standalone report. There is no flag to disable it.
 - **Offer to file findings** (Phase 7) into a per-topic field-research book, at the end
@@ -159,9 +159,9 @@ Configured separately as an MCP server; only matters when the resolved domain is
 `judaism`. If unavailable, the `secondary` subagent (Tavily/Exa) carries more weight —
 Sefaria is never substituted with open-web search for the primary text.
 
-### CandleKeep (optional)
+### Trove (optional)
 
-Install the `candlekeep-cloud` plugin so the `ck` CLI is on your `PATH`. Detected
+Install the `candlekeep-cloud` plugin so the `trove` CLI is on your `PATH`. Detected
 automatically — no configuration in this plugin.
 
 ### NotebookLM (optional)
@@ -216,7 +216,7 @@ $HOME/dev/learn-research/learn-<topic-slug>/
   research-summary.md    — ~500-word synthesis
   sources/
     01-primary.md        — official docs, or Sefaria text, per domain
-    02-library.md        — CandleKeep sources
+    02-library.md        — Trove sources
     03-community.md      — discussion and practitioner sources
     04-articles.md
 ```
@@ -251,7 +251,7 @@ learn-toolkit/                                 # Plugin root (plugins/learn-tool
             │   └── judaism.md
             ├── notebooklm-loading.md           # Notebook overflow logic
             ├── artifact-generation.md          # NotebookLM tool signatures
-            └── candlekeep-integration.md       # CandleKeep read/write reference
+            └── trove-integration.md       # Trove read/write reference
 ```
 
 ## Development

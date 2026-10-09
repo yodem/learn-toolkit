@@ -19,7 +19,7 @@ claude plugin install learn-toolkit@learn-toolkit-marketplace
 
 This installs the single skill and configures MCP servers automatically:
 - `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]`
-  — domain-aware deep research across Tavily, Exa, Sefaria, and CandleKeep, with an
+  — domain-aware deep research across Tavily, Exa, Sefaria, and Trove (formerly CandleKeep), with an
   optional NotebookLM learning package.
 
 ### Step 2: Set up API keys
@@ -75,25 +75,25 @@ NotebookLM is fully optional. If the user wants podcast/infographic/flashcard
 generation:
 - Check if they have `notebooklm-mcp` installed.
 - If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your
-  topic, save it locally, and offer the CandleKeep write — it just skips the notebook
+  topic, save it locally, and offer the Trove write — it just skips the notebook
   package (phases 3-5 as one unit) with a single notice. Add NotebookLM later from
   https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time
   to skip it deliberately."
 
-### Step 3b: CandleKeep (optional)
+### Step 3b: Trove (optional)
 
-If the user has `candlekeep-cloud` installed (with the `ck` CLI available),
+If the user has `candlekeep-cloud` installed (with the `trove` CLI available),
 `/learn-toolkit:learn` will automatically:
 - **Scan the library** via the `library` subagent, dispatched as part of Phase 1's
   parallel research fan-out, for existing knowledge on the topic — this runs
   unconditionally on every invocation, on every domain, returning a digest alongside
   every other backend's rather than a standalone report. There is no flag to disable it.
 - **Offer, interactively, at the end of the run** (Phase 7) to file the session's
-  findings into a per-topic CandleKeep field-research book. This is a question the
+  findings into a per-topic Trove field-research book. This is a question the
   workflow asks, not a flag — decline it and nothing is written.
 
-There is no `--ck-write` or `--no-ck-read` flag in this version. CandleKeep is never
-required — the workflow skips both phases silently if `ck` is not installed.
+There is no `--ck-write` or `--no-ck-read` flag in this version. Trove is never
+required — the workflow skips both phases silently if `trove` is not installed.
 
 ### Step 4: Confirm
 
@@ -106,7 +106,7 @@ Plugin **learn-toolkit** (v2.2.0) installed. Here's what you have:
 | Skill | Command | Ready? |
 |-------|---------|--------|
 | Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=low\|medium\|high\|xhigh]]` | After plugin configuration (optional) |
-| CandleKeep (optional) | Library scan + field-research offer, no flags needed | If `ck` CLI installed |
+| Trove (optional) | Library scan + field-research offer, no flags needed | If `trove` CLI installed |
 | NotebookLM (optional) | Notebook + artifact package, or skip with `--no-notebook` | If `notebooklm-mcp` configured |
 
 **After installation (keys optional):**

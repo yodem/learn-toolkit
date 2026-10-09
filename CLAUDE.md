@@ -19,7 +19,7 @@ claude plugin install learn-toolkit@learn-toolkit-marketplace
 This installs the plugin's one skill and configures MCP servers automatically:
 - `/learn-toolkit:learn <subject>` — domain-aware deep research (Tavily + Exa, plus
   Sefaria for `judaism`) into a NotebookLM learning package (podcast, infographic, mind
-  map, flashcards, study guide), with optional CandleKeep library integration.
+  map, flashcards, study guide), with optional Trove (formerly CandleKeep) library integration.
 
 ### Step 2: Set up API keys for /learn (optional but recommended)
 
@@ -81,26 +81,26 @@ This installs 8 skills:
 
 If the user wants podcast/infographic/mind-map/flashcard generation:
 - Check if they have `notebooklm-mcp` installed
-- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic, save it locally, and offer the CandleKeep write — it just won't generate a podcast, infographic, mind map, flashcards, or study guide. Add it later from https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time to skip it deliberately."
+- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic, save it locally, and offer the Trove write — it just won't generate a podcast, infographic, mind map, flashcards, or study guide. Add it later from https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time to skip it deliberately."
 
 When NotebookLM is absent, or when the user passes `--no-notebook`, the workflow's Phase
 3-5 (notebook creation + artifact generation) skip together as one unit. Research, local
-file output, and the CandleKeep offer are unaffected — NotebookLM is never a blocker.
+file output, and the Trove offer are unaffected — NotebookLM is never a blocker.
 
-### Step 3b: CandleKeep (optional)
+### Step 3b: Trove (optional)
 
-If the user has `candlekeep-cloud` installed (with the `ck` CLI available),
+If the user has `candlekeep-cloud` installed (with the `trove` CLI available),
 `/learn-toolkit:learn` will automatically:
 - **Scan the library** for existing documents on the topic before researching — this
   runs unconditionally on every domain, with no flag to disable it.
-- **Offer to write** a compiled field-research entry back to CandleKeep at the end of the
+- **Offer to write** a compiled field-research entry back to Trove at the end of the
   run — this is an interactive yes/no question at Phase 7, not a flag. It appends to a
   per-topic `Field Research — <Topic>` book; declining writes nothing.
 
 Neither behavior above is flag-gated in this version — the old read/write flags from
 earlier releases are gone; the scan is now always-on and the write is always an
-interactive prompt. CandleKeep is never required — the workflow skips both the scan and
-the offer silently if `ck` is not installed.
+interactive prompt. Trove is never required — the workflow skips both the scan and
+the offer silently if `trove` is not installed.
 
 ### Step 4: Confirm
 
@@ -113,7 +113,7 @@ Plugin **learn-toolkit** installed. Here's what you have:
 | Command | Ready? |
 |---------|--------|
 | `/learn-toolkit:learn <subject>` | Right away — Exa search works keyless; add keys with `/plugin configure` |
-| CandleKeep (optional) | Automatic library scan + end-of-run write offer, if `ck` CLI installed |
+| Trove (optional) | Automatic library scan + end-of-run write offer, if `trove` CLI installed |
 | NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
 | Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`tvly init --agent claude-code`) |
 

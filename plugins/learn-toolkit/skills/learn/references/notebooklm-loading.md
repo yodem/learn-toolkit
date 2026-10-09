@@ -7,7 +7,7 @@ either is true:
 - `--no-notebook` was passed
 
 When skipped, emit exactly one notice — `NotebookLM not available — skipping the notebook
-package. Research, local files and the CandleKeep offer are unaffected.` — omit the notebook
+package. Research, local files and the Trove (formerly CandleKeep) offer are unaffected.` — omit the notebook
 and artifact tables from the final report, and continue to Phase 6.
 
 **Never stop the workflow because NotebookLM is missing.**

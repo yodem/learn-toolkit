@@ -5,13 +5,13 @@
     "email": "yodem@users.noreply.github.com"
   },
   "metadata": {
-    "description": "Yotam's personal learning-workflow plugin: domain-aware deep research into an optional NotebookLM package and a CandleKeep field-research book."
+    "description": "Yotam's personal learning-workflow plugin: domain-aware deep research into an optional NotebookLM package and a Trove field-research book."
   },
   "plugins": [
     {
       "name": "learn-toolkit",
       "version": "2.2.0",
-      "description": "One skill, /learn <subject>, with domain-aware research routing across Tavily, Exa, Sefaria and CandleKeep.",
+      "description": "One skill, /learn <subject>, with domain-aware research routing across Tavily, Exa, Sefaria and Trove.",
       "source": "./plugins/learn-toolkit"
     }
   ]

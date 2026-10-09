@@ -15,13 +15,13 @@ Three subagents, dispatched in one message:
    `mcp__claude_ai_Sefaria__english_semantic_search`,
    `mcp__claude_ai_Sefaria__get_topic_details`,
    `mcp__claude_ai_Sefaria__get_links_between_texts` for commentary chains.
-2. **library** — CandleKeep Judaica books (see `../candlekeep-integration.md`).
+2. **library** — Trove (formerly CandleKeep) Judaica books (see `../trove-integration.md`).
 3. **secondary** — Tavily and Exa, **secondary only**: scholarship and shiurim that
    contextualise the primary text. Never used in place of Sefaria.
 
 ## Source Ranking
 
-primary text (Sefaria) > classical commentators > library (CandleKeep) > academic scholarship > shiurim and popular writing
+primary text (Sefaria) > classical commentators > library (Trove) > academic scholarship > shiurim and popular writing
 
 ## Query Patterns
 
