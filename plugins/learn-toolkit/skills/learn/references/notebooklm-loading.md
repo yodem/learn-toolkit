@@ -95,7 +95,7 @@ State file lives at `/tmp/learn-workflow-state-<topic-slug>.json` — topic-scop
 concurrent `/learn` runs on different subjects don't clobber each other's state. The
 five keys `topic`, `domain`, `notebooks`, `total_sources`, `local_path` are required by
 the workflow's validation hook, which rejects the file if any is missing. The sixth key,
-`candlekeep` (`read_ids`, `write_id`), is not checked by the hook but is written from the
+`candlekeep` (`read_ids`, `write_id`; the key keeps its legacy name, it is persisted on disk), is not checked by the hook but is written from the
 start and used by Phase 7 to track the field-research book id.
 
 Update the state file after EVERY notebook creation and source addition. Read it before any operation.

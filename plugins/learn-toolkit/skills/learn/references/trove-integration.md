@@ -47,10 +47,14 @@ These were learned in production, each the hard way. All six bind everything bel
 ## CLI Detection (Phase 0)
 
 ```bash
-trove --version 2>/dev/null || ck --version 2>/dev/null && echo "TROVE_CLI=true" || echo "TROVE_CLI=false"
+if command -v trove >/dev/null 2>&1; then echo "TROVE_CLI=true"
+elif command -v ck >/dev/null 2>&1; then echo "TROVE_CLI=legacy"
+else echo "TROVE_CLI=false"; fi
 ```
 
-Set `HAS_TROVE = true/false`. Missing is not an error — just skip Trove steps
+Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exists, report
+"found the legacy `ck` CLI; install/upgrade to `trove`", set `HAS_TROVE = false` and treat
+Trove as unavailable. Missing is not an error — just skip Trove steps
 silently and continue the workflow.
 
 ## Library Scan (Phase 1, `library` subagent)

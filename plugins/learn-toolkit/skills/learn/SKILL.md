@@ -104,10 +104,14 @@ full CLI access.
 #### Step 0c: Trove CLI
 
 ```bash
-trove --version 2>/dev/null || ck --version 2>/dev/null && echo "TROVE_CLI=true" || echo "TROVE_CLI=false"
+if command -v trove >/dev/null 2>&1; then echo "TROVE_CLI=true"
+elif command -v ck >/dev/null 2>&1; then echo "TROVE_CLI=legacy"
+else echo "TROVE_CLI=false"; fi
 ```
 
-Set `HAS_TROVE`. Missing is not an error.
+Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exists
+(`TROVE_CLI=legacy`), report "found the legacy `ck` CLI; install/upgrade to `trove`", set
+`HAS_TROVE = false` and treat Trove as unavailable. Missing is not an error.
 
 #### Report the matrix
 
@@ -304,7 +308,8 @@ sources at all. Keep the run ID as `DEEP_RUN_ID=<run id>`; Phase 2 writes it to 
      claims, where they disagree, open questions.
 4. Save the workflow state file. The validation hook requires five keys — `topic`,
    `domain`, `notebooks`, `total_sources`, `local_path` — and rejects the file if any is
-   missing. Also write a sixth top-level key, `trove` (`read_ids`, `write_id`): the
+   missing. Also write a sixth top-level key, `candlekeep` (`read_ids`, `write_id`; the key keeps its
+   legacy name because it is persisted on disk): the
    hook ignores it, but Phase 7 reads and updates `candlekeep.write_id` when filing
    findings, so it must be present from the start:
 
@@ -314,7 +319,7 @@ echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_so
 
 `$TOPIC_SLUG` is the subject lowercased, spaces to hyphens, special characters removed.
 
-**Verification gate:** state file written with the 5 hook-required keys plus `trove`; synthesis has
+**Verification gate:** state file written with the 5 hook-required keys plus `candlekeep`; synthesis has
 the three sections in basics → advanced → research order and is ≥2500 characters.
 
 ### Phase 2.5: Save Local Files
