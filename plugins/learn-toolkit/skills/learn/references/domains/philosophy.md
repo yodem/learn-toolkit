@@ -15,12 +15,12 @@ Three subagents, dispatched in one message:
    strength; use it rather than domain-filtered Tavily here.
 2. **overview** — Tavily general search for encyclopedic and orienting material
    (SEP, IEP, university course pages).
-3. **library** — CandleKeep, prioritising per-author humanities books
-   (see `../candlekeep-integration.md`).
+3. **library** — Trove (formerly CandleKeep), prioritising per-author humanities books
+   (see `../trove-integration.md`).
 
 ## Source Ranking
 
-primary texts > peer-reviewed literature > library (CandleKeep) > encyclopedic overviews (SEP/IEP) > essays > blog posts
+primary texts > peer-reviewed literature > library (Trove) > encyclopedic overviews (SEP/IEP) > essays > blog posts
 
 ## Query Patterns
 

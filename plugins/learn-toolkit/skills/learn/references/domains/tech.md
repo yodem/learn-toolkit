@@ -16,11 +16,11 @@ Four subagents, dispatched in one message:
 3. **community** — Tavily with `--include-domains reddit.com,news.ycombinator.com,stackoverflow.com
    --time-range year`, plus Exa `web_search_advanced_exa` with `category: "personal site"` for
    practitioner write-ups.
-4. **library** — CandleKeep (see `../candlekeep-integration.md`).
+4. **library** — Trove (formerly CandleKeep; see `../trove-integration.md`).
 
 ## Source Ranking
 
-official docs > source code / repos > library (CandleKeep) > practitioner discussion > tutorials > blog posts
+official docs > source code / repos > library (Trove) > practitioner discussion > tutorials > blog posts
 
 ## Query Patterns
 

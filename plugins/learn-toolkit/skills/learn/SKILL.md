@@ -1,14 +1,14 @@
 ---
 name: learn
-description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and CandleKeep with one subagent per backend, then optionally builds a NotebookLM package and files findings into a CandleKeep field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
+description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and Trove (formerly CandleKeep) with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
-allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(mktemp *), Bash(python3 *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
+allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
   version: 2.2.0
   mcp-server: tavily, exa, exa-agent, notebooklm-mcp
   category: learning
-  tags: [research, domains, tavily, exa, sefaria, candlekeep, notebooklm]
+  tags: [research, domains, tavily, exa, sefaria, trove, notebooklm]
 ---
 
 # Learn Workflow
@@ -36,7 +36,7 @@ measures and why it matters. A table is never the first thing the user sees.
 
 CRITICAL: follow the phases in order. Each phase has a verification gate — do not
 proceed until it passes. The **only** hard stop in this entire workflow is zero
-available search backends (Phase 0). Every other missing tool — NotebookLM, CandleKeep,
+available search backends (Phase 0). Every other missing tool — NotebookLM, Trove,
 Sefaria, one of the two search backends — degrades the run instead of stopping it.
 
 ## Instructions
@@ -101,18 +101,22 @@ If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
 and extract work without login; `tvly login` or `tvly init --agent claude-code` enables
 full CLI access.
 
-#### Step 0c: CandleKeep CLI
+#### Step 0c: Trove CLI
 
 ```bash
-ck --version 2>/dev/null && echo "CK_CLI=true" || echo "CK_CLI=false"
+if command -v trove >/dev/null 2>&1; then echo "TROVE_CLI=true"
+elif command -v ck >/dev/null 2>&1; then echo "TROVE_CLI=legacy"
+else echo "TROVE_CLI=false"; fi
 ```
 
-Set `HAS_CANDLEKEEP`. Missing is not an error.
+Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exists
+(`TROVE_CLI=legacy`), report "found the legacy `ck` CLI; install/upgrade to `trove`", set
+`HAS_TROVE = false` and treat Trove as unavailable. Missing is not an error.
 
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [CandleKeep ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
 ```
 
 **The only hard stop in the workflow:** if `HAS_TAVILY` is false AND `HAS_EXA` is false,
@@ -139,7 +143,7 @@ Every other backend degrades instead of stopping:
 - `HAS_SEFARIA = false` — only matters if the resolved domain is `judaism`; note it in
   the domain announcement and let the `judaism` roster's `secondary` subagent (Tavily/Exa)
   carry more weight.
-- `HAS_CANDLEKEEP = false` — the library subagent and Phase 7 offer are skipped silently.
+- `HAS_TROVE = false` — the library subagent and Phase 7 offer are skipped silently.
 - `HAS_NOTEBOOKLM = false` — see Phase 3-5.
 - `HAS_ARTIFACT = false` — the Phase 6b learning page is still written locally, just not
   published (see Phase 6b).
@@ -239,9 +243,9 @@ accumulating every subagent's raw exploration.
   explicit windows and `maxAgeHours` only when a fresh crawl is needed.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
   pull commentary chains — never substitute open-web search for the primary text.
-- CandleKeep `library` subagents follow
-  `${CLAUDE_SKILL_DIR}/references/candlekeep-integration.md` — `ck items list --json`,
-  match up to 3 items by topic keywords, `ck items toc` then `ck items read` for the
+- Trove `library` subagents follow
+  `${CLAUDE_SKILL_DIR}/references/trove-integration.md` — `trove items list --json`,
+  match up to 3 items by topic keywords, `trove items toc` then `trove items read` for the
   relevant pages, and return the same digest contract (`kind: "library"`).
 
 **Verification gate:** every dispatched subagent returned at least one digest entry, and
@@ -304,7 +308,8 @@ sources at all. Keep the run ID as `DEEP_RUN_ID=<run id>`; Phase 2 writes it to 
      claims, where they disagree, open questions.
 4. Save the workflow state file. The validation hook requires five keys — `topic`,
    `domain`, `notebooks`, `total_sources`, `local_path` — and rejects the file if any is
-   missing. Also write a sixth top-level key, `candlekeep` (`read_ids`, `write_id`): the
+   missing. Also write a sixth top-level key, `candlekeep` (`read_ids`, `write_id`; the key keeps its
+   legacy name because it is persisted on disk): the
    hook ignores it, but Phase 7 reads and updates `candlekeep.write_id` when filing
    findings, so it must be present from the start:
 
@@ -334,7 +339,7 @@ $HOME/dev/learn-research/learn-<topic-slug>/
   learning-page.html     — the Phase 6b learning page
   sources/
     01-primary.md        — official docs, or Sefaria text, per domain
-    02-library.md        — CandleKeep sources
+    02-library.md        — Trove sources
     03-community.md      — discussion and practitioner sources
     04-articles.md
 ```
@@ -360,7 +365,7 @@ either is true:
 When skipped, emit exactly:
 
 > NotebookLM not available — skipping the notebook package. Research, local files and
-> the CandleKeep offer are unaffected.
+> the Trove offer are unaffected.
 
 Omit the NotebookLM notebook and NotebookLM artifact tables from the final report and continue straight to
 Phase 6. **Never stop the workflow because NotebookLM is missing or skipped.**
@@ -373,7 +378,7 @@ signatures.
 
 **Phase 3 — Load into NotebookLM:**
 1. Create notebook `[Topic] - Core Learning`.
-2. Add CandleKeep sources first (`wait=false`, title `"Library: [Item Title]"`) if any.
+2. Add Trove sources first (`wait=false`, title `"Library: [Item Title]"`) if any.
 3. Add remaining URL/primary-text sources (`wait=false`).
 4. Add the research summary as a text source (`wait=true`).
 5. Update the state file's `notebooks[]` and `total_sources` after each addition.
@@ -449,21 +454,21 @@ outermost wrapper element instead of on `<html>`.
 the three sections in order and either published it (artifact URL in hand) or reported
 the local path with the reason it was not published.
 
-### Phase 7: CandleKeep Field Research Offer
+### Phase 7: Trove Field Research Offer
 
-**Condition:** `HAS_CANDLEKEEP = true`. Otherwise skip silently.
+**Condition:** `HAS_TROVE = true`. Otherwise skip silently.
 
-Follow `${CLAUDE_SKILL_DIR}/references/candlekeep-integration.md` → `## Field Research
+Follow `${CLAUDE_SKILL_DIR}/references/trove-integration.md` → `## Field Research
 Offer (Phase 7)` exactly: run the format-tolerant existence check, create + enrich the
 book at creation if none exists, then interactively ask the user:
 
-> **Would you like to file today's findings into your CandleKeep field-research book on
+> **Would you like to file today's findings into your Trove field-research book on
 > this topic?**
 
 If yes: compose the dated entry per `## Entry Format` in that reference (one H1 per
 page, `#` escaped inside any fence, subject/domain/sources/findings/open-questions),
-append with `ck items append <book-id> --file <path> --no-session`, then verify with
-`ck items read "<book-id>:<n>" --no-session` — **never** by trusting the append
+append with `trove items append <book-id> --file <path> --no-session`, then verify with
+`trove items read "<book-id>:<n>" --no-session` — **never** by trusting the append
 command's own log output. Update the state file's `candlekeep.write_id`.
 
 If the append or readback fails, report it plainly and leave the local entry file in
@@ -471,7 +476,7 @@ place — do not silently drop the finding.
 
 If the user declines, skip without writing anything.
 
-**Verification gate:** either skipped silently (`HAS_CANDLEKEEP = false`), declined by
+**Verification gate:** either skipped silently (`HAS_TROVE = false`), declined by
 the user, or a successful append confirmed by read-back.
 
 ### Final Report
@@ -494,7 +499,7 @@ indefinitely or produces a false stale-state warning.
 
 `/learn-toolkit:learn Next.js App Router`
 
-1. Phase 0: Tavily MCP ✓, Exa ✓, Exa Agent ✓, CandleKeep ✓, NotebookLM ✓, Artifact ✓.
+1. Phase 0: Tavily MCP ✓, Exa ✓, Exa Agent ✓, Trove ✓, NotebookLM ✓, Artifact ✓.
 2. Phase 0.5: no `--domain` given → inferred `tech` (documentation/framework subject).
    Announces `Domain: tech (inferred) — official docs, source repos, practitioner
    discussion. Override with --domain.` Language resolves to `en`.
@@ -515,12 +520,12 @@ indefinitely or produces a false stale-state warning.
 
 `/learn-toolkit:learn hilchot shabbat candle lighting --domain judaism`
 
-1. Phase 0: Tavily ✓, Sefaria ✓, CandleKeep ✓, NotebookLM ✗ (not configured).
+1. Phase 0: Tavily ✓, Sefaria ✓, Trove ✓, NotebookLM ✗ (not configured).
 2. Phase 0.5: `--domain judaism` given, so inference is skipped. Language resolves to
    `he` (domain default, no `--language` override). Announces
    `Domain: judaism (--domain) — Sefaria primary text, classical commentators,
    library. Override with --domain.`
-3. Phase 1: dispatches `primary` (Sefaria), `library` (CandleKeep), `secondary`
+3. Phase 1: dispatches `primary` (Sefaria), `library` (Trove), `secondary`
    (Tavily/Exa) — Sefaria resolves the citation first before the secondary subagent
    runs its contextualizing search.
 4. Phase 2: ranks primary text > commentators > library > academic scholarship >
@@ -528,25 +533,25 @@ indefinitely or produces a false stale-state warning.
 5. Phase 2.5: local files saved; `01-primary.md` holds the Sefaria text and commentary
    chain.
 6. Phase 3-5: **skipped** — single notice printed: "NotebookLM not available — skipping
-   the notebook package. Research, local files and the CandleKeep offer are
+   the notebook package. Research, local files and the Trove offer are
    unaffected." No notebook/artifact tables in the final report.
 7. Phase 6a: ASCII diagram of the sugya structure. Phase 6b: Hebrew RTL learning page —
    the text and its plain meaning first, then the commentators and halakhic positions,
    then scholarship.
-8. Phase 7: offers to file findings into a CandleKeep field-research book.
+8. Phase 7: offers to file findings into a Trove field-research book.
 
 ### Example 3 — philosophy, degraded search
 
 `/learn-toolkit:learn the Ship of Theseus and personal identity`
 
-1. Phase 0: Tavily ✗ (not configured), Exa ✓, CandleKeep ✓, NotebookLM ✓. Since at
+1. Phase 0: Tavily ✗ (not configured), Exa ✓, Trove ✓, NotebookLM ✓. Since at
    least one search backend (Exa) is available, the workflow proceeds — only zero
    backends stops it.
 2. Phase 0.5: inferred `philosophy` (argument/thinker subject, no primary Jewish text).
    Language resolves to `he`.
 3. Phase 1: dispatches `literature` (Exa only, Tavily-dependent query patterns skipped),
    `overview` (degrades — notes Tavily unavailable, relies on Exa for encyclopedic
-   framing too), `library` (CandleKeep).
+   framing too), `library` (Trove).
 4. Phase 2 onward proceeds normally; Phase 6b's learning page opens with the puzzle and
    its terms (identity, persistence), then the positions and objections, then the
    literature.
@@ -578,8 +583,8 @@ indefinitely or produces a false stale-state warning.
 | Studio artifact generation fails | NotebookLM internal error | Retry once; if it still fails, report "Failed" in the summary table |
 | `Artifact` tool unavailable, or the publish is refused | Not Claude Code, or the file is outside the allowed directories | Copy `learning-page.html` to the scratchpad and retry once; otherwise keep the local file, report its path and the reason, continue |
 | State file write fails | `/tmp` permission issue | Continue without state tracking; keep counts in-memory for this run |
-| `ck` not found | CLI not installed | `HAS_CANDLEKEEP=false`; skip library subagent and Phase 7 silently |
-| `ck items list` fails | Auth issue | Warn once, set `HAS_CANDLEKEEP=false`, continue |
-| `ck items read` fails for one item | Bad item id | Skip that item, continue with the rest |
-| `ck items append` succeeds but the log looks like it failed (`BadRecordMac`) | TLS response-stream error, write may still have landed | Never trust the log — verify with `ck items read "<book-id>:<n>"`. Report actual state from the readback |
-| `ck items create`/`append` genuinely fails | Permission or network issue | Warn, leave the local entry file in `~/dev/learn-research/learn-<topic-slug>/`, do not drop the finding |
+| `trove` not found | CLI not installed | `HAS_TROVE=false`; skip library subagent and Phase 7 silently |
+| `trove items list` fails | Auth issue | Warn once, set `HAS_TROVE=false`, continue |
+| `trove items read` fails for one item | Bad item id | Skip that item, continue with the rest |
+| `trove items append` succeeds but the log looks like it failed (`BadRecordMac`) | TLS response-stream error, write may still have landed | Never trust the log — verify with `trove items read "<book-id>:<n>"`. Report actual state from the readback |
+| `trove items create`/`append` genuinely fails | Permission or network issue | Warn, leave the local entry file in `~/dev/learn-research/learn-<topic-slug>/`, do not drop the finding |

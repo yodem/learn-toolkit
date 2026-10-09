@@ -1,8 +1,8 @@
-# CandleKeep Integration Reference
+# Trove Integration Reference
 
 ## Overview
 
-CandleKeep provides bidirectional integration with the `/learn` workflow:
+Trove (formerly CandleKeep) provides bidirectional integration with the `/learn` workflow:
 - **Read** (Phase 1): the `library` subagent, dispatched as part of every domain's
   Subagent Roster in Phase 1's fan-out, scans the library for existing knowledge on the
   topic and returns a digest alongside every other backend's — runs on **every domain,
@@ -12,19 +12,19 @@ CandleKeep provides bidirectional integration with the `/learn` workflow:
   per-topic field-research book. There is no write-enabling flag; the interactive offer
   replaces it outright.
 
-CandleKeep is **never required** — the workflow proceeds normally if `ck` is not
-installed. Every CandleKeep failure is non-fatal: warn and continue (see Error Recovery
+Trove is **never required** — the workflow proceeds normally if `trove` is not
+installed. Every Trove failure is non-fatal: warn and continue (see Error Recovery
 in `SKILL.md`).
 
 ## Six hard-won constraints
 
 These were learned in production, each the hard way. All six bind everything below.
 
-1. **Pagination splits on `#` H1 and ignores code fences.** CandleKeep's pager only
+1. **Pagination splits on `#` H1 and ignores code fences.** Trove's pager only
    recognizes `#` headings at the top level to cut pages — it does not track whether a
    `#` is inside a fenced code block. Author content with exactly one H1 per intended
    page, or pages will fragment incorrectly.
-2. **A `#` inside a fence gets a blank line injected above it on write.** CandleKeep
+2. **A `#` inside a fence gets a blank line injected above it on write.** Trove
    treats any line starting with `#` as a heading candidate during ingestion, even
    inside a ` ``` ` fence, and inserts a blank line before it — which can break the
    fence's formatting. Escape `#` characters inside code fences at write time (e.g.
@@ -32,30 +32,34 @@ These were learned in production, each the hard way. All six bind everything bel
 3. **A book is capped at 1,000,000 bytes.** Overflow returns HTTP 413. Keep entries and
    compiled content under this ceiling; split oversized content across multiple items
    rather than one write that exceeds it.
-4. **Appends use `ck items append <book-id>`, not `ck ms <id>`.** `ck ms` is a different,
+4. **Appends use `trove items append <book-id>`, not `trove ms <id>`.** `trove ms` is a different,
    unrelated command surface — using it against a book id does not append content.
-5. **Verify a write with `ck items read <id>:<n>`, never by reading the command's log
+5. **Verify a write with `trove items read <id>:<n>`, never by reading the command's log
    output.** A `BadRecordMac` TLS error can hit the response stream while the write
    itself succeeded server-side — the log will show a failure that isn't real, and a
    silent success in the log doesn't prove the bytes landed either. The only valid
    verification is reading the item back.
-6. **`ck items enrich --add-prompt` and `--sample-question` must be set at creation.**
+6. **`trove items enrich --add-prompt` and `--sample-question` must be set at creation.**
    If a book is created without them and enriched later as an afterthought, it may not
-   become agent-queryable. Always run `ck items enrich` immediately after `ck items
+   become agent-queryable. Always run `trove items enrich` immediately after `trove items
    create`, before any append.
 
 ## CLI Detection (Phase 0)
 
 ```bash
-ck --version 2>/dev/null && echo "CK_CLI=true" || echo "CK_CLI=false"
+if command -v trove >/dev/null 2>&1; then echo "TROVE_CLI=true"
+elif command -v ck >/dev/null 2>&1; then echo "TROVE_CLI=legacy"
+else echo "TROVE_CLI=false"; fi
 ```
 
-Set `HAS_CANDLEKEEP = true/false`. Missing is not an error — just skip CandleKeep steps
+Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exists, report
+"found the legacy `ck` CLI; install/upgrade to `trove`", set `HAS_TROVE = false` and treat
+Trove as unavailable. Missing is not an error — just skip Trove steps
 silently and continue the workflow.
 
 ## Library Scan (Phase 1, `library` subagent)
 
-**Condition:** `HAS_CANDLEKEEP = true`. That's it — the `library` subagent is part of
+**Condition:** `HAS_TROVE = true`. That's it — the `library` subagent is part of
 every domain's Subagent Roster, so this runs on every domain, unconditionally, as one
 of the parallel subagents dispatched in Phase 1's fan-out (not a standalone Phase 0.5
 step). There is no read-skip flag.
@@ -63,7 +67,7 @@ step). There is no read-skip flag.
 ### Step 1: List items and match by topic
 
 ```bash
-ck items list --json
+trove items list --json
 ```
 
 Parse the JSON output. Match items whose title or description contains keywords from
@@ -74,13 +78,13 @@ the topic. Select up to 3 most relevant items.
 For each matching item (max 3):
 
 ```bash
-ck items toc <item-id>
+trove items toc <item-id>
 ```
 
 Review the table of contents, identify relevant pages/sections.
 
 ```bash
-ck items read "<item-id>:<relevant-pages>"
+trove items read "<item-id>:<relevant-pages>"
 ```
 
 Extract content snippets (500-1000 words per item).
@@ -98,18 +102,18 @@ folded into Phase 2's merge alongside every other backend's digests:
 ```
 
 If nothing matches, the subagent returns an empty digest array and Phase 2's merge
-simply has nothing to fold in from CandleKeep for this run.
+simply has nothing to fold in from Trove for this run.
 
 ## Source Hierarchy (Phase 2)
 
-Where CandleKeep sources rank relative to other backends (official docs, tutorials,
+Where Trove sources rank relative to other backends (official docs, tutorials,
 blog posts, code repos) is **per-domain**, not fixed here — each `domains/<domain>.md`
-defines its own source hierarchy. List CandleKeep sources under a "Library Sources"
+defines its own source hierarchy. List Trove sources under a "Library Sources"
 heading in the research summary regardless of where the domain ranks them.
 
 ## NotebookLM Loading (Phase 3)
 
-Add CandleKeep content as text sources to NotebookLM **before** URLs, after notebook
+Add Trove content as text sources to NotebookLM **before** URLs, after notebook
 creation:
 
 ```
@@ -136,7 +140,7 @@ $HOME/dev/learn-research/learn-<topic-slug>/
   research-summary.md    — 500-word synthesis
   sources/
     01-official-docs.md
-    02-library.md         — CandleKeep sources (if any)
+    02-library.md         — Trove sources (if any)
     03-tutorials.md
     04-articles.md
 ```
@@ -144,7 +148,7 @@ $HOME/dev/learn-research/learn-<topic-slug>/
 Each source file contains:
 - URL or source identifier
 - Title
-- Backend that provided it (Tavily, Exa, CandleKeep)
+- Backend that provided it (Tavily, Exa, Trove)
 - Content snippet
 
 The `topic-slug` is the topic lowercased, spaces replaced with hyphens, special chars
@@ -152,7 +156,7 @@ removed. Example: `"Kafka Event Streaming"` → `kafka-event-streaming`.
 
 ## Field Research Offer (Phase 7)
 
-**Condition:** `HAS_CANDLEKEEP = true`. At the end of the run, offer — interactively —
+**Condition:** `HAS_TROVE = true`. At the end of the run, offer — interactively —
 to append this session's findings to a per-topic field-research book. This replaces the
 old write-enabling flag entirely; there is no flag to check, only a question to ask the
 user.
@@ -164,7 +168,7 @@ existing book is found whatever shape its title takes. A strict match would sile
 create duplicates.
 
 ```bash
-ck items list --json --no-session | python3 -c "
+trove items list --json --no-session | python3 -c "
 import json,sys,re
 topic_tokens = [t for t in re.split(r'\W+', '<TOPIC>'.lower()) if len(t) > 3]
 items = json.load(sys.stdin)
@@ -180,10 +184,10 @@ If nothing matches, create the book — enriching it **at creation**, per constr
 above:
 
 ```bash
-ck items create "Field Research — <Topic>" \
+trove items create "Field Research — <Topic>" \
   --description "Field research on <Topic>. Started by learn-toolkit on <YYYY-MM-DD>." \
   --no-session
-ck items enrich <id> \
+trove items enrich <id> \
   --add-prompt "Consult this book for field-research findings on <Topic>, including sources consulted and open questions." \
   --sample-question "What did the field research on <Topic> conclude?" \
   --no-session
@@ -193,8 +197,8 @@ Append the entry, then verify by reading back — never by trusting the append c
 own log output (constraint 5):
 
 ```bash
-ck items append <book-id> --file <path-to-entry.md> --no-session
-ck items read "<book-id>:<n>" --no-session   # the ONLY valid verification
+trove items append <book-id> --file <path-to-entry.md> --no-session
+trove items read "<book-id>:<n>" --no-session   # the ONLY valid verification
 ```
 
 If the append or the readback fails, report it plainly and leave the local entry file
@@ -202,7 +206,7 @@ in place under `Local Files` — do not silently drop the finding.
 
 ## Entry Format
 
-Author one `#` H1 per intended page (constraint 1) — CandleKeep's pager splits on `#`
+Author one `#` H1 per intended page (constraint 1) — Trove's pager splits on `#`
 and does not understand fences, so an entry with multiple top-level `#` headings will
 split into multiple pages unintentionally. Escape any `#` that appears inside a code
 fence (constraint 2), and keep the entry well under the 1,000,000-byte book cap
@@ -210,7 +214,7 @@ fence (constraint 2), and keep the entry well under the 1,000,000-byte book cap
 
 The book (`Field Research — <Topic>`) is per-topic; each append is one per-session
 entry inside it, and the book accumulates entries across many runs. Make the H1 the
-session's specific subject, not the topic or book title again, so `ck items toc
+session's specific subject, not the topic or book title again, so `trove items toc
 <book-id>` lets a reader tell one page from another at a glance. Each entry is dated
 and carries subject, domain, sources consulted, key findings, and open questions:
 
@@ -232,5 +236,5 @@ and carries subject, domain, sources consulted, key findings, and open questions
 
 ## Error Recovery
 
-See the Error Recovery table in `SKILL.md` for all CandleKeep error handling. The key
-principle: every CandleKeep failure is non-fatal — warn and continue.
+See the Error Recovery table in `SKILL.md` for all Trove error handling. The key
+principle: every Trove failure is non-fatal — warn and continue.
