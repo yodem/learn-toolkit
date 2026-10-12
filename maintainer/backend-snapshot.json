@@ -38,6 +38,7 @@
       "https://exa.ai/docs/get-started/exa-mcp.md",
       "https://exa.ai/docs/get-started/quickstart.md",
       "https://exa.ai/docs/index.md",
+      "https://exa.ai/docs/integrations/ag2.md",
       "https://exa.ai/docs/integrations/baseten.md",
       "https://exa.ai/docs/integrations/browserbase.md",
       "https://exa.ai/docs/integrations/chatgpt-codex.md",
@@ -292,10 +293,10 @@
     "tavily_search"
   ],
   "versions": {
-    "exa-mcp-server": "3.4.1",
+    "exa-mcp-server": "3.4.2",
     "exa-py": "2.25.0",
     "tavily-cli": "0.1.8",
     "tavily-mcp": "0.2.22",
-    "tavily-python": "0.8.4"
+    "tavily-python": "0.8.5"
   }
 }
