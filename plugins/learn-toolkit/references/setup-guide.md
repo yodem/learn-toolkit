@@ -101,7 +101,7 @@ Tell the user:
 
 ---
 
-Plugin **learn-toolkit** (v2.2.0) installed. Here's what you have:
+Plugin **learn-toolkit** (v2.2.1) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|

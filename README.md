@@ -53,7 +53,7 @@ learn-toolkit/                                  # Repository root — marketplac
 │   └── marketplace.json                        # Marketplace catalog for /plugin install
 ├── README.md                                   # This file
 ├── LICENSE
-└── plugins/learn-toolkit/                      # The installable plugin (v2.2.0)
+└── plugins/learn-toolkit/                      # The installable plugin (v2.2.1)
     ├── .claude-plugin/plugin.json               # Plugin manifest
     ├── .mcp.json                                # MCP servers (Tavily, Exa, Exa Agent) with sensitive userConfig headers
     ├── hooks/                                   # Output/artifact validation hooks

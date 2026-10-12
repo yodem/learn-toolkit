@@ -231,7 +231,7 @@ hit.
 ```
 learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
-│   └── plugin.json                            # Plugin manifest (name, version 2.2.0)
+│   └── plugin.json                            # Plugin manifest (name, version 2.2.1)
 ├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent); keys from userConfig
 ├── hooks/
 │   ├── hooks.json
