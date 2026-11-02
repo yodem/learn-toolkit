@@ -19,7 +19,7 @@ and offers to file the session into a Trove field-research book.
 
 Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. Never paste keys in chat.
+For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. From 0.2.1, `tvly init` needs Node.js (`npx`) to install the Tavily skills; without Node.js run `tvly login` instead (`/learn` does not need the skills). Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily or Exa to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See

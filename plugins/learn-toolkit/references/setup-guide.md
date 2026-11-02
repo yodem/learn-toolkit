@@ -51,7 +51,9 @@ Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` u
 curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
-Use `tvly` 0.1.8 or newer; upgrade with `tvly update`.
+Use `tvly` 0.1.8 or newer; upgrade with `tvly update`. From `tvly` 0.2.1, `tvly init` installs
+the Tavily skills through `npx` and fails without Node.js (login is already saved by then);
+`/learn` does not need those skills, so without Node.js use `tvly login` or `tvly init --skip-skills`.
 
 The workflow checks CLI authentication with:
 
