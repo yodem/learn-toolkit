@@ -1,0 +1,47 @@
+# Self-hosted web-research backend: SearXNG + elad12390/web-research-assistant behind a bearer-token
+# HTTP endpoint. Secrets come from the .env file next to this compose file (never committed).
+services:
+  # dns: the dev server's default resolver (the router, 10.100.102.1) returns NXDOMAIN for some
+  # public names (example.com), which breaks crawling and the SSRF guard's resolve-or-refuse rule.
+  searxng:
+    dns: [1.1.1.1, 9.9.9.9]
+    image: searxng/searxng@sha256:1f3720f59a0361592dc942e4be50e0ebb63c112d915883fcb78a011995fffb47
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET:?set SEARXNG_SECRET in .env}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/search?q=test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  wra:
+    dns: [1.1.1.1, 9.9.9.9]
+    build:
+      context: .
+      additional_contexts:
+        upstream: "https://github.com/elad12390/web-research-assistant.git#f41d3fbba9e52d258b82390ec21a0382a1c28f2e"
+    ports:
+      - "${WRA_BIND_IP:?set WRA_BIND_IP in .env}:8765:8765"
+    environment:
+      - WRA_TOKEN=${WRA_TOKEN:?set WRA_TOKEN in .env}
+      - WRA_BIND_IP=${WRA_BIND_IP}
+      - PROXY_URL=${PROXY_URL:-}
+      - EXA_API_KEY=${EXA_API_KEY:-}
+      - PIXABAY_API_KEY=${PIXABAY_API_KEY:-}
+      - SEARCH_PROVIDER=${SEARCH_PROVIDER:-auto}
+      - SEARXNG_BASE_URL=http://searxng:8080/search
+      - MCP_USAGE_LOG=/app/data/usage.json
+    volumes:
+      # Named volume: uid 10001 can always write usage.json, whoever owns the host directory.
+      - wra-data:/app/data
+    depends_on:
+      searxng:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  wra-data:

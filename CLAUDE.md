@@ -36,7 +36,7 @@ Then tell them:
 
 ---
 
-The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; use tvly >= 0.1.8 (`tvly update`). Never paste keys in chat.
+The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; search and extract work from tvly 0.1.6; `--deep` needs >= 0.1.8 (`tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). Never paste keys in chat.
 
 ---
 
@@ -55,7 +55,7 @@ curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
 
-Use `tvly` version 0.1.8 or newer; update with `tvly update`. Run `tvly login` if authentication is needed.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, below 0.1.8, `uv tool upgrade tavily-cli`; `/learn` tries this once itself. Run `tvly login` if authentication is needed.
 
 **Check auth with `tvly auth`, not `tvly --status`** — the latter prints a two-part
 banner whose auth line is lost when piped, giving a false negative. `/learn-toolkit:learn`
@@ -102,6 +102,16 @@ earlier releases are gone; the scan is now always-on and the write is always an
 interactive prompt. Trove is never required — the workflow skips both the scan and
 the offer silently if `trove` is not installed.
 
+### Step 3c: web-research (optional, self-hosted)
+
+An optional fourth backend: [elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, run in Docker from [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research). It adds free SearXNG search, batch search and crawl, stealth scraping, an optional residential proxy (`PROXY_URL`; the `country` argument routes through that country), and package, GitHub, changelog and API-docs lookups.
+
+If the user wants it:
+- Deploy the server from the infra README. The user writes the token and secret into the server's `.env` and `.token` files; never ask for them or paste them in chat.
+- Set `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then `/reload-plugins`. The user types the token into the configure prompt.
+
+Both settings are optional. A blank URL fails only the web-research server ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
+
 ### Step 4: Confirm
 
 Tell the user:
@@ -116,6 +126,7 @@ Plugin **learn-toolkit** installed. Here's what you have:
 | Trove (optional) | Automatic library scan + end-of-run write offer, if `trove` CLI installed |
 | NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
 | Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`tvly init --agent claude-code`) |
+| web-research (optional, self-hosted) | Search, crawl and package tools, if `web_research_url` and token are set (Step 3c) |
 
 **After installation (keys optional):**
 ```

@@ -51,7 +51,7 @@ Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` u
 curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
-Use `tvly` 0.1.8 or newer; upgrade with `tvly update`.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, on older versions, `uv tool upgrade tavily-cli`. `/learn` tries that upgrade once itself.
 
 The workflow checks CLI authentication with:
 
@@ -94,6 +94,12 @@ If the user has `candlekeep-cloud` installed (with the `trove` CLI available),
 
 There is no `--ck-write` or `--no-ck-read` flag in this version. Trove is never
 required — the workflow skips both phases silently if `trove` is not installed.
+
+### Step 3c: web-research (optional, self-hosted)
+
+An optional self-hosted backend ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, 16 tools) that adds free SearXNG search, stealth scraping, package/GitHub/changelog/API-docs lookups, and an optional residential proxy with per-country routing. The user deploys it from [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research); the server's token and secret live in its `.env` and `.token` files, written by the user, never in chat.
+
+In the plugin, the user sets `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then runs `/reload-plugins`. The token is typed into the configure prompt. Both settings are optional: a blank URL fails only the web-research server ("URL is unset or invalid"), and Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
 ### Step 4: Confirm
 

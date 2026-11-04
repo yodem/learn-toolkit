@@ -1,12 +1,12 @@
 ---
 name: learn
-description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and Trove (formerly CandleKeep) with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
+description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and Trove (formerly CandleKeep), plus an optional self-hosted web-research server, with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
-allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
+allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
-  version: 2.2.1
-  mcp-server: tavily, exa, exa-agent, notebooklm-mcp
+  version: 2.3.0
+  mcp-server: tavily, exa, exa-agent, web-research, notebooklm-mcp
   category: learning
   tags: [research, domains, tavily, exa, sefaria, trove, notebooklm]
 ---
@@ -37,7 +37,7 @@ measures and why it matters. A table is never the first thing the user sees.
 CRITICAL: follow the phases in order. Each phase has a verification gate — do not
 proceed until it passes. The **only** hard stop in this entire workflow is zero
 available search backends (Phase 0). Every other missing tool — NotebookLM, Trove,
-Sefaria, one of the two search backends — degrades the run instead of stopping it.
+Sefaria, one of the search backends — degrades the run instead of stopping it.
 
 ## Instructions
 
@@ -59,10 +59,12 @@ negative:
 tvly auth 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=false"
 ```
 
-Require `tvly` version 0.1.8 or newer. Below that, set `HAS_TAVILY_SKILLS=false` and
-suggest `tvly update`. Set `HAS_TAVILY_SKILLS=true` when `tvly` is installed at version
-0.1.8 or newer, regardless of authentication. Set `HAS_TAVILY_CLI_AUTH=true` only when
-`tvly auth` passes; otherwise set it false.
+Below version 0.1.8, which has no `tvly update`, try one upgrade and re-check `tvly --version` once:
+`uv tool upgrade tavily-cli` if `uv tool list` shows `tavily-cli`, otherwise `pipx upgrade
+tavily-cli`. Never pipe the installer script to a shell. Report it in the matrix as `[Tavily CLI ✓ (upgraded <old>→<new>)]`.
+Search and extract work from 0.1.6, so set `HAS_TAVILY_SKILLS=true` whenever `tvly` runs, whether or not the
+upgrade worked. Set `HAS_TAVILY_RESEARCH_CLI=true` only at 0.1.8 or newer, because `--deep` needs `research run
+--citation-format --no-wait`. Set `HAS_TAVILY_CLI_AUTH=true` only when `tvly auth` passes; otherwise set it false.
 
 #### Step 0b: MCP backends
 
@@ -83,6 +85,9 @@ Run these `ToolSearch` calls in parallel:
    `judaism`, but cheap to check now alongside the others.
 4. `ToolSearch(query="+notebooklm")` — look for `mcp__notebooklm-mcp__notebook_create`,
    `source_add`, `studio_create`, `studio_status`.
+5. `ToolSearch(query="batch_crawl_urls stealth_scrape")` — the optional self-hosted
+   web-research server; details in `${CLAUDE_SKILL_DIR}/references/web-research.md`. If it
+   finds nothing, re-run this one query once after the other probes finish; never retry per subagent.
 
 Also note whether the `Artifact` tool is in your tool list (it is a built-in Claude Code
 tool, not an MCP server, so no `ToolSearch` is needed).
@@ -92,14 +97,19 @@ Set:
 - `HAS_TAVILY` = true if `HAS_TAVILY_MCP` OR `HAS_TAVILY_SKILLS`.
 - `HAS_EXA` = true if a tool ending in `__web_search_advanced_exa` was found.
 - `HAS_EXA_AGENT` = true if `agent_run` was found on a server whose name contains `exa`.
+  No `__agent_run` but a tool ending in `__authenticate` on a server whose name contains
+  `exa-agent` means it needs auth: show `[Exa Agent ✗ (needs auth / Exa key)]`, not "not found".
 - `HAS_SEFARIA` = true if `mcp__claude_ai_Sefaria__text_search` was found.
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
+- `HAS_WEB_RESEARCH` = true if a tool ending in `__batch_crawl_urls` exists on a server whose name contains `web-research`.
 
 If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
 `HAS_TAVILY_MCP=false` and continue with the `tvly` CLI if available. Keyless CLI search
 and extract work without login; `tvly login` or `tvly init --agent claude-code` enables
 full CLI access.
+
+With no `__tavily_search` tool, show `[Tavily MCP ✗ (key rejected or blank: /plugin configure learn-toolkit@learn-toolkit-marketplace)]`.
 
 #### Step 0c: Trove CLI
 
@@ -116,12 +126,15 @@ Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exi
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗]
 ```
 
-**The only hard stop in the workflow:** if `HAS_TAVILY` is false AND `HAS_EXA` is false,
+When `[Web research ✗]` and `/mcp` shows `INVALID_CONFIG`, the URL is blank: that's expected if you don't self-host, so add nothing. Otherwise add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
+token is wrong; re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace`".
+
+**The only hard stop in the workflow:** if `HAS_TAVILY`, `HAS_EXA` and `HAS_WEB_RESEARCH` are all false,
 halt before Phase 0.5 (see the Error Recovery table below for the exact directive). Show
-setup instructions for both and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
+setup instructions for every missing backend and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
 after fixing the above." Do not fall back to bare `WebSearch`.
 
 If Tavily is missing:
@@ -240,7 +253,14 @@ accumulating every subagent's raw exploration.
   the 3-5 keepers with `maxCharacters: 4000`; request one content view per call. Allowed
   categories: `publication`, `personal site`, `news`, `company`, `people`, and
   financial report. Put recency in query wording; use published-date filters only for
-  explicit windows and `maxAgeHours` only when a fresh crawl is needed.
+  explicit windows and `maxAgeHours` only when a fresh crawl is needed. Rewrite GitHub
+  `/blob/<ref>/` URLs to `raw.githubusercontent.com/<o>/<r>/<ref>/<path>` before fetching.
+- Keyless Exa budget: the skill cannot read the Exa key, so whenever `HAS_TAVILY` is false,
+  or a rate-limit error was seen in Phase 1 (on re-dispatch), each subagent gets at most 2
+  Exa searches plus 3 fetches, prefers web-research `batch_web_search` when `HAS_WEB_RESEARCH`,
+  and says so in its digest.
+- web-research subagents (only when `HAS_WEB_RESEARCH`) follow
+  `${CLAUDE_SKILL_DIR}/references/web-research.md`: one batch call per lane, digests only.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
   pull commentary chains — never substitute open-web search for the primary text.
 - Trove `library` subagents follow
@@ -257,7 +277,7 @@ weakest subagent with a broadened query before proceeding.
 This is Phase 1b; it runs after the regular search fan-out.
 
 Skip silently unless `$DEEP_EFFORT` is set. If `HAS_EXA_AGENT` is false and
-both `HAS_TAVILY_SKILLS` and `HAS_TAVILY_CLI_AUTH` are true, use the CLI fallback:
+`HAS_TAVILY_RESEARCH_CLI` and `HAS_TAVILY_CLI_AUTH` are both true, use the CLI fallback:
 `tvly research "<question>" --model pro --citation-format numbered --no-wait
 --output-schema '<the outputSchema below>' --json`, then poll with
 `tvly research poll <request_id> --json` every 30 seconds, at most 10 times, until
@@ -568,10 +588,15 @@ indefinitely or produces a false stale-state warning.
 
 | Error | Cause | Action |
 |-------|-------|--------|
-| Both Tavily and Exa unavailable | Neither MCP nor CLI configured, no keys | **STOP workflow.** Show setup instructions for both. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
+| Tavily, Exa and web-research all unavailable | No Tavily MCP or CLI, no Exa, no web-research server | **STOP workflow.** Show setup instructions for each missing backend. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
 | Tavily CLI auth fails (`tvly auth`) | Not logged in | Set `HAS_TAVILY_CLI_AUTH=false`; keep `HAS_TAVILY_SKILLS=true` for search and extract, and ask the user to run `tvly login` for full CLI access |
 | Tavily MCP returns `Invalid Tavily API key` | Tavily key is blank or invalid | Set `HAS_TAVILY_MCP=false`; use `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
+| web-research `failed` with `AUTH_HEADER_REJECTED` (401) | Token is wrong or blank | `HAS_WEB_RESEARCH=false`; continue on Tavily/Exa; tell the user to re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
+| web-research unreachable | Tailnet down or server stopped | `HAS_WEB_RESEARCH=false`; continue on the other backends |
+| web-research returns zero results | Search engines blocked or empty | Treat as a failed lane; lean on Tavily and Exa |
 | Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
+| Tavily MCP fails at connect with HTTP 401 `AUTH_HEADER_REJECTED` ("Server rejected the configured Authorization header") | `tavily_api_key` stale, or blank (Tavily then asks for OAuth, which the plugin cannot complete) | `HAS_TAVILY_MCP=false`; continue on the `tvly` CLI; tell the user to re-enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
+| Exa rate-limit or HTTP 429 error | Keyless Exa throttled by the parallel fan-out | After the fan-out, re-dispatch the starved subagent once, serially, under the keyless Exa budget; tell the user to add an Exa key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
 | `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |
 | tvly exits 3 | Authentication required | Set HAS_TAVILY_CLI_AUTH=false, continue with search and extract only, and tell the user to run tvly login themselves |

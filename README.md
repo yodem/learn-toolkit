@@ -45,6 +45,10 @@ Then configure the `tavily`, `exa`, and `exa-agent` MCP servers in `~/.claude/se
 
 </details>
 
+### Optional: self-hosted web-research backend
+
+A fourth, optional backend: 16 search, crawl and lookup tools ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG) that you run yourself in Docker. Deploy it from [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research), then set `web_research_url` and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace` and run `/reload-plugins`. Both are optional: with the URL blank only the web-research server fails, and Tavily, Exa and the rest work as before. Type the token into the configure prompt only; never paste it in chat.
+
 ## Repository layout
 
 ```

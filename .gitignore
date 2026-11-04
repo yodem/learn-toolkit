@@ -7,3 +7,5 @@ skills-lock.json
 .academic-helper/
 .academic-writer/
 __pycache__/
+infra/web-research/data/
+infra/web-research/.token

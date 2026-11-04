@@ -19,7 +19,7 @@ and offers to file the session into a Trove field-research book.
 
 Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. Never paste keys in chat.
+For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily or Exa to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
@@ -88,6 +88,7 @@ resolved domain's file in full before dispatching any research.
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
 | Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the Trove offer are unaffected |
+| web-research | Optional, self-hosted | Free SearXNG search, batch search and crawl, stealth scraping, package/GitHub/changelog/API-docs lookups | Only the web-research server shows as failed; every other backend works unchanged |
 
 ### NotebookLM is optional
 
@@ -145,7 +146,7 @@ tvly login                                 # opens browser for OAuth
 # or: tvly login --api-key tvly-YOUR_KEY
 ```
 The workflow checks CLI auth with `tvly auth` (not `tvly --status`, whose two-part
-banner drops the auth line when piped). Use `tvly` >= 0.1.8; update with `tvly update`.
+banner drops the auth line when piped). Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8).
 
 **Option B — MCP server:** enter the key through `/plugin configure learn-toolkit@learn-toolkit-marketplace`. A blank Tavily key leaves the MCP unusable; use the `tvly` CLI or configure the key.
 
@@ -171,6 +172,17 @@ Install [notebooklm-mcp](https://github.com/nicholasgriffintn/notebooklm-mcp), t
 ```bash
 nlm login
 ```
+
+### web-research (optional, self-hosted)
+
+A self-hosted server ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, 16 tools) that adds free, unlimited SearXNG search, stealth scraping, an optional residential proxy (`PROXY_URL`, e.g. Evomi, where the `country` argument routes a request through that country), and package, GitHub, changelog and API-docs lookups. Deployment steps are in [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research).
+
+Set two plugin settings with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then run `/reload-plugins`:
+
+- `web_research_url`: `http://<WRA_BIND_IP>:8765/mcp`
+- `web_research_token`: the server's token (sensitive; enter it in the configure prompt, never in chat)
+
+Both are optional. With the URL blank, only the web-research server fails ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
 ## API key safety
 
