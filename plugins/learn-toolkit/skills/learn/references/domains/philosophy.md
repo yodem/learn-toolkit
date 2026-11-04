@@ -18,6 +18,11 @@ Three subagents, dispatched in one message:
 3. **library** — Trove (formerly CandleKeep), prioritising per-author humanities books
    (see `../trove-integration.md`).
 
+Optional extra role, dispatched in the same message only when `HAS_WEB_RESEARCH`:
+
+- **web** — web-research `batch_web_search` (one batch call), plus `batch_crawl_urls` for
+  the keepers; see `../web-research.md`. It adds to the other roles and never replaces them.
+
 ## Source Ranking
 
 primary texts > peer-reviewed literature > library (Trove) > encyclopedic overviews (SEP/IEP) > essays > blog posts

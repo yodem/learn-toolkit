@@ -19,6 +19,11 @@ Three subagents, dispatched in one message:
 3. **secondary** — Tavily and Exa, **secondary only**: scholarship and shiurim that
    contextualise the primary text. Never used in place of Sefaria.
 
+Optional extra role, dispatched in the same message only when `HAS_WEB_RESEARCH`:
+
+- **web** — web-research `batch_web_search` (one batch call), plus `batch_crawl_urls` for
+  the keepers; see `../web-research.md`. It adds to the other roles and never replaces them.
+
 ## Source Ranking
 
 primary text (Sefaria) > classical commentators > library (Trove) > academic scholarship > shiurim and popular writing

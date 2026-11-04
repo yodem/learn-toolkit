@@ -17,6 +17,13 @@
       "type": "http",
       "url": "https://mcp.exa.ai/mcp?tools=agent_run",
       "headers": { "x-api-key": "${user_config.exa_api_key}" }
+    },
+    "web-research": {
+      "type": "http",
+      "url": "${user_config.web_research_url}",
+      "headers": {
+        "Authorization": "Bearer ${user_config.web_research_token}"
+      }
     }
   }
 }

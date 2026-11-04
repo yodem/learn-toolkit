@@ -18,6 +18,13 @@ Four subagents, dispatched in one message:
    practitioner write-ups.
 4. **library** — Trove (formerly CandleKeep; see `../trove-integration.md`).
 
+Optional extra roles, dispatched in the same message only when `HAS_WEB_RESEARCH`:
+
+- **web** — web-research `batch_web_search` with categories `it` and `general` (one batch
+  call), plus `batch_crawl_urls` for the keepers; see `../web-research.md`.
+- **packages** — web-research `package_info`, `github_repo`, `api_docs`, `get_changelog`,
+  and `compare_tech` when the subject names two or more technologies.
+
 ## Source Ranking
 
 official docs > source code / repos > library (Trove) > practitioner discussion > tutorials > blog posts

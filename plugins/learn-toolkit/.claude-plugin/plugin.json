@@ -1,7 +1,7 @@
 {
   "name": "learn-toolkit",
-  "version": "2.2.1",
-  "description": "One skill, /learn <subject>, that researches a topic with domain-aware tool routing (tech, philosophy, judaism), fans research out across Tavily, Exa, Sefaria and Trove, and optionally builds a NotebookLM learning package.",
+  "version": "2.3.0",
+  "description": "One skill, /learn <subject>, that researches a topic with domain-aware tool routing (tech, philosophy, judaism), fans research out across Tavily, Exa, Sefaria and Trove (plus an optional self-hosted web-research server), and optionally builds a NotebookLM learning package.",
   "author": {
     "name": "Yotam Fromm",
     "url": "https://github.com/yodem"
@@ -31,6 +31,20 @@
       "type": "string",
       "title": "Tavily API key",
       "description": "From https://app.tavily.com. Leave blank to use the tvly CLI; keyless search and extract work without login. Use tvly login or tvly init --agent claude-code for full CLI access.",
+      "sensitive": true,
+      "required": false
+    },
+    "web_research_url": {
+      "type": "string",
+      "title": "web-research server URL",
+      "description": "Optional. The MCP URL of your own self-hosted web-research server (16 extra tools: batch search, crawling, package and repo lookups). Setup: https://github.com/yodem/learn-toolkit/tree/main/infra/web-research. Leave blank to skip it; /learn then runs on Tavily and Exa alone.",
+      "sensitive": true,
+      "required": false
+    },
+    "web_research_token": {
+      "type": "string",
+      "title": "web-research bearer token",
+      "description": "Optional. The bearer token (WRA_TOKEN) of your web-research server; see https://github.com/yodem/learn-toolkit/tree/main/infra/web-research. Leave blank if you left the URL blank.",
       "sensitive": true,
       "required": false
     }
