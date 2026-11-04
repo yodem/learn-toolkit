@@ -25,7 +25,7 @@ SETUP_GUIDE="${PLUGIN_ROOT}/references/setup-guide.md"
 
 FINDINGS=0
 PASSED=0
-TOTAL_CHECKS=10
+TOTAL_CHECKS=13
 
 fail_line() {
   local check="$1" detail="$2"
@@ -811,7 +811,7 @@ PYEOF
 check9_no_hardcoded_mcp_prefix() {
   local output status
   status=0
-  output=$(grep -REn 'mcp__(exa|exa-agent|tavily)__' "${SKILL_MD}" "${SKILL_DIR}/references/domains") || status=$?
+  output=$(grep -REn 'mcp__(exa|exa-agent|tavily|web-research)__' "${SKILL_MD}" "${SKILL_DIR}/references/domains" "${SKILL_DIR}/references/web-research.md") || status=$?
   case "${status}" in
     0) printf '%s\n' "${output}" ;;
     1) ;;
@@ -835,6 +835,108 @@ PYEOF
 }
 
 # --------------------------------------------------------------------------
+# Check 11: web-research is an optional, authenticated, sensitive backend
+# --------------------------------------------------------------------------
+check11_web_research_optional() {
+  python3 - "${MCP_JSON}" "${PLUGIN_ROOT}/.claude-plugin/plugin.json" <<'PYEOF'
+import json, sys
+mcp_path, plugin_path = sys.argv[1:]
+try:
+    mcp = json.load(open(mcp_path, encoding="utf-8"))
+    plugin = json.load(open(plugin_path, encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"configuration could not be parsed: {exc}"); raise SystemExit(0)
+server = mcp.get("mcpServers", {}).get("web-research")
+if not isinstance(server, dict):
+    print("web-research: server missing from .mcp.json")
+else:
+    if server.get("type") != "http":
+        print("web-research: type must be http")
+    if server.get("url") != "${user_config.web_research_url}":
+        print("web-research: url must be exactly ${user_config.web_research_url}")
+    auth = (server.get("headers") or {}).get("Authorization")
+    if auth != "Bearer ${user_config.web_research_token}":
+        print("web-research: Authorization header must be Bearer ${user_config.web_research_token}")
+config = plugin.get("userConfig", {})
+for key in ("web_research_url", "web_research_token"):
+    entry = config.get(key)
+    if not isinstance(entry, dict):
+        print(f"plugin.json: userConfig.{key} missing")
+        continue
+    if entry.get("required") is not False:
+        print(f"plugin.json: userConfig.{key} must be required:false")
+    if entry.get("sensitive") is not True:
+        print(f"plugin.json: userConfig.{key} must be sensitive:true")
+PYEOF
+}
+
+# --------------------------------------------------------------------------
+# Check 12: web-research tool names in prose are real tools
+# --------------------------------------------------------------------------
+check12_web_research_tools_known() {
+  python3 - "${SKILL_MD}" "${SKILL_DIR}/references/web-research.md" "${SKILL_DIR}/references/domains" <<'PYEOF'
+import glob, os, re, sys
+
+TOOLS = {"web_search", "batch_web_search", "search_examples", "search_images",
+         "crawl_url", "batch_crawl_urls", "stealth_scrape", "package_info",
+         "package_search", "github_repo", "translate_error", "api_docs",
+         "extract_data", "compare_tech", "get_changelog", "check_service_status"}
+# Not tools, but legitimately backticked snake_case in the same prose: the 5
+# upstream prompts and the two plugin settings.
+OTHER = {"research_package", "debug_error", "compare_technologies",
+         "evaluate_repository", "check_service_health",
+         "web_research_url", "web_research_token"}
+KNOWN = TOOLS | OTHER
+IDENT = re.compile(r"`([a-z]+(?:_[a-z0-9]+)+)`")
+
+def unknown_in(text, table_file):
+    """Backticked snake_case identifiers within 40 chars of `web-research`
+    (any file) or inside a table row (the web-research.md reference) that are
+    not a known tool, prompt or setting."""
+    bad = []
+    for line in text.splitlines():
+        in_table = table_file and line.lstrip().startswith("|")
+        anchors = [m.start() for m in re.finditer(r"web-research", line)]
+        for m in IDENT.finditer(line):
+            near = any(abs(m.start() - a) <= 40 for a in anchors)
+            if (in_table or near) and m.group(1) not in KNOWN:
+                bad.append(m.group(1))
+    return bad
+
+# Self-test: a misspelt tool name beside web-research must be caught.
+if not unknown_in("| web-research | `web_searches` |", True):
+    print("self-test failed: `web_searches` was not flagged as unknown")
+
+files = [(sys.argv[1], False), (sys.argv[2], True)]
+files += [(p, False) for p in sorted(glob.glob(os.path.join(sys.argv[3], "*.md")))]
+for path, table_file in files:
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        continue
+    for name in unknown_in(text, table_file):
+        print(f"`{name}` in {os.path.basename(path)} is not one of the 16 web-research tools")
+PYEOF
+}
+
+# --------------------------------------------------------------------------
+# Check 13: web-research is wired into the matrix and the hard stop
+# --------------------------------------------------------------------------
+check13_web_research_in_matrix() {
+  python3 - "${SKILL_MD}" <<'PYEOF'
+import pathlib, re, sys
+text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+flat = re.sub(r"\s+", " ", text)
+if "[Web research ✓/✗]" not in text:
+    print("SKILL.md matrix is missing [Web research ✓/✗]")
+if "HAS_WEB_RESEARCH" not in text:
+    print("SKILL.md never sets HAS_WEB_RESEARCH")
+if "`HAS_TAVILY`, `HAS_EXA` and `HAS_WEB_RESEARCH` are all false" not in flat:
+    print("SKILL.md hard stop must name HAS_TAVILY, HAS_EXA and HAS_WEB_RESEARCH")
+PYEOF
+}
+
+# --------------------------------------------------------------------------
 # Run all checks
 # --------------------------------------------------------------------------
 report "undefined-vars" "$(check1_undefined_vars)"
@@ -847,6 +949,9 @@ report "phase-order" "$(check7_phase_order)"
 report "mcp-config" "$(check8_mcp_config)"
 report "no-hardcoded-mcp-prefix" "$(check9_no_hardcoded_mcp_prefix)"
 report "no-env-key-advice-and-agent-run-polling" "$(check10_key_advice_and_agent_polling)"
+report "web-research-optional" "$(check11_web_research_optional)"
+report "web-research-tools-known" "$(check12_web_research_tools_known)"
+report "web-research-in-matrix" "$(check13_web_research_in_matrix)"
 
 if [[ "${FINDINGS}" -gt 0 ]]; then
   echo "lint-skill: ${PASSED}/${TOTAL_CHECKS} checks passed, ${FINDINGS} finding(s)"
