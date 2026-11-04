@@ -15,7 +15,7 @@ server lives at https://github.com/yodem/learn-toolkit/tree/main/infra/web-resea
 - If that one query finds nothing while the other probes found their backends, re-run it
   once after all probes finish (an http server can connect late). Never retry per subagent.
 - A blank URL fails only this server (`INVALID_CONFIG`); Tavily and Exa still connect.
-- A wrong token returns 401, which Claude Code shows as `needs authentication`, so the tools
+- A wrong token returns 401, which Claude Code shows as `failed` with `AUTH_HEADER_REJECTED`, so the tools
   never register and Phase 0 cannot tell it from a blank URL. That is why the `✗` note
   always tells the user to check `/mcp`.
 
@@ -57,7 +57,7 @@ sends them in one `batch_web_search`; one that has several URLs sends them in on
 
 ## Failure handling
 
-- `needs authentication`, 401 or an unreachable server: the backend is `✗`; carry on with
+- `failed` with `AUTH_HEADER_REJECTED` (401), or `needs authentication`, or an unreachable server: the backend is `✗`; carry on with
   Tavily, Exa and the other lanes. Never ask the user to paste the token in chat.
 - Zero results from `batch_web_search` (SearXNG engines blocked or empty): treat it like a
   failed lane and lean on Tavily and Exa. Do not retry with the same query.

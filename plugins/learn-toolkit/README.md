@@ -182,7 +182,7 @@ Set two plugin settings with `/plugin configure learn-toolkit@learn-toolkit-mark
 - `web_research_url`: `http://<WRA_BIND_IP>:8765/mcp`
 - `web_research_token`: the server's token (sensitive; enter it in the configure prompt, never in chat)
 
-Both are optional. With the URL blank, only the web-research server fails ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as "needs authentication" in `/mcp`.
+Both are optional. With the URL blank, only the web-research server fails ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
 ## API key safety
 

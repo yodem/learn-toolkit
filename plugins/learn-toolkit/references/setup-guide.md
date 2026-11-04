@@ -99,7 +99,7 @@ required — the workflow skips both phases silently if `trove` is not installed
 
 An optional self-hosted backend ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, 16 tools) that adds free SearXNG search, stealth scraping, package/GitHub/changelog/API-docs lookups, and an optional residential proxy with per-country routing. The user deploys it from [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research); the server's token and secret live in its `.env` and `.token` files, written by the user, never in chat.
 
-In the plugin, the user sets `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then runs `/reload-plugins`. The token is typed into the configure prompt. Both settings are optional: a blank URL fails only the web-research server ("URL is unset or invalid"), and Tavily and Exa still connect. A wrong token shows as "needs authentication" in `/mcp`.
+In the plugin, the user sets `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then runs `/reload-plugins`. The token is typed into the configure prompt. Both settings are optional: a blank URL fails only the web-research server ("URL is unset or invalid"), and Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
 ### Step 4: Confirm
 

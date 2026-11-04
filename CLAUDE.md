@@ -110,7 +110,7 @@ If the user wants it:
 - Deploy the server from the infra README. The user writes the token and secret into the server's `.env` and `.token` files; never ask for them or paste them in chat.
 - Set `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then `/reload-plugins`. The user types the token into the configure prompt.
 
-Both settings are optional. A blank URL fails only the web-research server ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as "needs authentication" in `/mcp`.
+Both settings are optional. A blank URL fails only the web-research server ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
 ### Step 4: Confirm
 

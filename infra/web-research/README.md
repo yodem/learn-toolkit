@@ -38,7 +38,7 @@ In the plugin, set `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web
 ## Rotate the token
 
 Write a new `WRA_TOKEN` into `.env` and `.token`, run `docker compose up -d` (recreates `wra`), then re-enter the
-token in the plugin config. A wrong token shows as `needs authentication` in `/mcp`.
+token in the plugin config. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
 ## Proxy (optional)
 
