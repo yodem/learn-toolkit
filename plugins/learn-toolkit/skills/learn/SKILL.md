@@ -59,8 +59,8 @@ negative:
 tvly auth 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=false"
 ```
 
-Below version 0.1.8, try one upgrade and re-check `tvly --version` once. Try them in this order: `tvly update`
-(0.1.8+ only), then `uv tool upgrade tavily-cli` if `uv tool list` shows `tavily-cli`, then `pipx upgrade
+Below version 0.1.8, which has no `tvly update`, try one upgrade and re-check `tvly --version` once:
+`uv tool upgrade tavily-cli` if `uv tool list` shows `tavily-cli`, otherwise `pipx upgrade
 tavily-cli`. Never pipe the installer script to a shell. Report it in the matrix as `[Tavily CLI ✓ (upgraded <old>→<new>)]`.
 Search and extract work from 0.1.6, so set `HAS_TAVILY_SKILLS=true` whenever `tvly` runs, whether or not the
 upgrade worked. Set `HAS_TAVILY_RESEARCH_CLI=true` only at 0.1.8 or newer, because `--deep` needs `research run

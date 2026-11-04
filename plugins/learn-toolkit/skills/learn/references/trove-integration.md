@@ -70,7 +70,7 @@ step). There is no read-skip flag.
 trove items list --json
 ```
 
-Pipe it straight into `python3 -c` or `jq`, as the example near the end of this file does,
+Pipe it straight into `python3 -c`, as the example near the end of this file does,
 and never write the item list to a file (no `/tmp`, no `$OUT`). Parse the JSON output. Match items whose title or description contains keywords from
 the topic. Select up to 3 most relevant items.
 
