@@ -51,7 +51,7 @@ Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` u
 curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
-Use `tvly` 0.1.8 or newer; upgrade with `tvly update`.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, on older versions, `uv tool upgrade tavily-cli`. `/learn` tries that upgrade once itself.
 
 The workflow checks CLI authentication with:
 

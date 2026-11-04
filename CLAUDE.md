@@ -36,7 +36,7 @@ Then tell them:
 
 ---
 
-The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; use tvly >= 0.1.8 (`tvly update`). Never paste keys in chat.
+The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; search and extract work from tvly 0.1.6; `--deep` needs >= 0.1.8 (`tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). Never paste keys in chat.
 
 ---
 
@@ -55,7 +55,7 @@ curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
 
-Use `tvly` version 0.1.8 or newer; update with `tvly update`. Run `tvly login` if authentication is needed.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, below 0.1.8, `uv tool upgrade tavily-cli`; `/learn` tries this once itself. Run `tvly login` if authentication is needed.
 
 **Check auth with `tvly auth`, not `tvly --status`** — the latter prints a two-part
 banner whose auth line is lost when piped, giving a false negative. `/learn-toolkit:learn`

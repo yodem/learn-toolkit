@@ -2,7 +2,7 @@
 name: learn
 description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and Trove (formerly CandleKeep), plus an optional self-hosted web-research server, with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
-allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
+allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
   version: 2.3.0
@@ -59,10 +59,12 @@ negative:
 tvly auth 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=false"
 ```
 
-Require `tvly` version 0.1.8 or newer. Below that, set `HAS_TAVILY_SKILLS=false` and
-suggest `tvly update`. Set `HAS_TAVILY_SKILLS=true` when `tvly` is installed at version
-0.1.8 or newer, regardless of authentication. Set `HAS_TAVILY_CLI_AUTH=true` only when
-`tvly auth` passes; otherwise set it false.
+Below version 0.1.8, try one upgrade and re-check `tvly --version` once. Try them in this order: `tvly update`
+(0.1.8+ only), then `uv tool upgrade tavily-cli` if `uv tool list` shows `tavily-cli`, then `pipx upgrade
+tavily-cli`. Never pipe the installer script to a shell. Report it in the matrix as `[Tavily CLI ✓ (upgraded <old>→<new>)]`.
+Search and extract work from 0.1.6, so set `HAS_TAVILY_SKILLS=true` whenever `tvly` runs, whether or not the
+upgrade worked. Set `HAS_TAVILY_RESEARCH_CLI=true` only at 0.1.8 or newer, because `--deep` needs `research run
+--citation-format --no-wait`. Set `HAS_TAVILY_CLI_AUTH=true` only when `tvly auth` passes; otherwise set it false.
 
 #### Step 0b: MCP backends
 
@@ -123,7 +125,7 @@ Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exi
 Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗]
 ```
 
-When `[Web research ✗]`, add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
+When `[Web research ✗]` and `/mcp` shows `INVALID_CONFIG`, the URL is blank: that's expected if you don't self-host, so add nothing. Otherwise add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
 token is wrong; re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace`".
 
 **The only hard stop in the workflow:** if `HAS_TAVILY`, `HAS_EXA` and `HAS_WEB_RESEARCH` are all false,
@@ -266,7 +268,7 @@ weakest subagent with a broadened query before proceeding.
 This is Phase 1b; it runs after the regular search fan-out.
 
 Skip silently unless `$DEEP_EFFORT` is set. If `HAS_EXA_AGENT` is false and
-both `HAS_TAVILY_SKILLS` and `HAS_TAVILY_CLI_AUTH` are true, use the CLI fallback:
+`HAS_TAVILY_RESEARCH_CLI` and `HAS_TAVILY_CLI_AUTH` are both true, use the CLI fallback:
 `tvly research "<question>" --model pro --citation-format numbered --no-wait
 --output-schema '<the outputSchema below>' --json`, then poll with
 `tvly research poll <request_id> --json` every 30 seconds, at most 10 times, until

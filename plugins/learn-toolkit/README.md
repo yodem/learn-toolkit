@@ -19,7 +19,7 @@ and offers to file the session into a Trove field-research book.
 
 Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Requires `tvly` >= 0.1.8; update with `tvly update`. Never paste keys in chat.
+For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily or Exa to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
@@ -146,7 +146,7 @@ tvly login                                 # opens browser for OAuth
 # or: tvly login --api-key tvly-YOUR_KEY
 ```
 The workflow checks CLI auth with `tvly auth` (not `tvly --status`, whose two-part
-banner drops the auth line when piped). Use `tvly` >= 0.1.8; update with `tvly update`.
+banner drops the auth line when piped). Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8).
 
 **Option B — MCP server:** enter the key through `/plugin configure learn-toolkit@learn-toolkit-marketplace`. A blank Tavily key leaves the MCP unusable; use the `tvly` CLI or configure the key.
 
