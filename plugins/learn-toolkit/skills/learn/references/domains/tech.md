@@ -50,6 +50,10 @@ Exa — describe the ideal page, never keywords:
 - GOOD: `"well-maintained GitHub repository with a README showing a minimal <subject> example"`
 - BAD: `"<subject> github"`
 
+Fetching GitHub files: `web_fetch_exa` returns an empty page shell for blob URLs. Rewrite
+`https://github.com/<o>/<r>/blob/<ref>/<path>` to
+`https://raw.githubusercontent.com/<o>/<r>/<ref>/<path>` before fetching.
+
 ## Output Settings
 
 - Language: `en`

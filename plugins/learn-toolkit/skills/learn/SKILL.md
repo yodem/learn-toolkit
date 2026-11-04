@@ -97,6 +97,8 @@ Set:
 - `HAS_TAVILY` = true if `HAS_TAVILY_MCP` OR `HAS_TAVILY_SKILLS`.
 - `HAS_EXA` = true if a tool ending in `__web_search_advanced_exa` was found.
 - `HAS_EXA_AGENT` = true if `agent_run` was found on a server whose name contains `exa`.
+  No `__agent_run` but a tool ending in `__authenticate` on a server whose name contains
+  `exa-agent` means it needs auth: show `[Exa Agent ✗ (needs auth / Exa key)]`, not "not found".
 - `HAS_SEFARIA` = true if `mcp__claude_ai_Sefaria__text_search` was found.
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
@@ -106,6 +108,8 @@ If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
 `HAS_TAVILY_MCP=false` and continue with the `tvly` CLI if available. Keyless CLI search
 and extract work without login; `tvly login` or `tvly init --agent claude-code` enables
 full CLI access.
+
+With no `__tavily_search` tool, show `[Tavily MCP ✗ (key rejected or blank: /plugin configure learn-toolkit@learn-toolkit-marketplace)]`.
 
 #### Step 0c: Trove CLI
 
@@ -249,7 +253,12 @@ accumulating every subagent's raw exploration.
   the 3-5 keepers with `maxCharacters: 4000`; request one content view per call. Allowed
   categories: `publication`, `personal site`, `news`, `company`, `people`, and
   financial report. Put recency in query wording; use published-date filters only for
-  explicit windows and `maxAgeHours` only when a fresh crawl is needed.
+  explicit windows and `maxAgeHours` only when a fresh crawl is needed. Rewrite GitHub
+  `/blob/<ref>/` URLs to `raw.githubusercontent.com/<o>/<r>/<ref>/<path>` before fetching.
+- Keyless Exa budget: the skill cannot read the Exa key, so whenever `HAS_TAVILY` is false,
+  or a rate-limit error was seen in Phase 1 (on re-dispatch), each subagent gets at most 2
+  Exa searches plus 3 fetches, prefers web-research `batch_web_search` when `HAS_WEB_RESEARCH`,
+  and says so in its digest.
 - web-research subagents (only when `HAS_WEB_RESEARCH`) follow
   `${CLAUDE_SKILL_DIR}/references/web-research.md`: one batch call per lane, digests only.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
@@ -586,6 +595,8 @@ indefinitely or produces a false stale-state warning.
 | web-research unreachable | Tailnet down or server stopped | `HAS_WEB_RESEARCH=false`; continue on the other backends |
 | web-research returns zero results | Search engines blocked or empty | Treat as a failed lane; lean on Tavily and Exa |
 | Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
+| Tavily MCP fails at connect with HTTP 401 `AUTH_HEADER_REJECTED` ("Server rejected the configured Authorization header") | `tavily_api_key` stale, or blank (Tavily then asks for OAuth, which the plugin cannot complete) | `HAS_TAVILY_MCP=false`; continue on the `tvly` CLI; tell the user to re-enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
+| Exa rate-limit or HTTP 429 error | Keyless Exa throttled by the parallel fan-out | After the fan-out, re-dispatch the starved subagent once, serially, under the keyless Exa budget; tell the user to add an Exa key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
 | `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |
 | tvly exits 3 | Authentication required | Set HAS_TAVILY_CLI_AUTH=false, continue with search and extract only, and tell the user to run tvly login themselves |
