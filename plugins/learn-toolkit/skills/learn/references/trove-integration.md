@@ -39,7 +39,7 @@ These were learned in production, each the hard way. All six bind everything bel
    itself succeeded server-side — the log will show a failure that isn't real, and a
    silent success in the log doesn't prove the bytes landed either. The only valid
    verification is reading the item back.
-6. **`trove items enrich --add-prompt` and `--sample-question` must be set at creation.**
+6. **`trove items enrich --add-prompt` (a JSON object, not plain text: `{"prompt":"…","context":"…","multiBook":false}`) and `--sample-question` must be set at creation.**
    If a book is created without them and enriched later as an afterthought, it may not
    become agent-queryable. Always run `trove items enrich` immediately after `trove items
    create`, before any append.
@@ -189,7 +189,7 @@ trove items create "Field Research — <Topic>" \
   --description "Field research on <Topic>. Started by learn-toolkit on <YYYY-MM-DD>." \
   --no-session
 trove items enrich <id> \
-  --add-prompt "Consult this book for field-research findings on <Topic>, including sources consulted and open questions." \
+  --add-prompt '{"prompt":"Consult this book for field-research findings on <Topic>, including sources consulted and open questions.","context":"Field research filed by learn-toolkit /learn","multiBook":false}' \
   --sample-question "What did the field research on <Topic> conclude?" \
   --no-session
 ```
