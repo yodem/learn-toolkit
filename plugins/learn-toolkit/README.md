@@ -114,9 +114,11 @@ zero available search backends (both Tavily and Exa missing).
 
 The former specialized Exa search tools and retired categories are no longer supported by this plugin. Search works keyless; Agent requires an Exa key.
 
+Since Exa 3.0 (Oct 2026) subagents pick an advanced-search `type`: `lite` for cheap triage, `auto` when a call needs a parameter Lite rejects (`additionalQueries`, `subpages`, summaries, `maxAgeHours`). The legacy `fast` and `instant` types are not used.
+
 ### Deep research (`--deep`)
 
-`--deep` opts into Exa Agent with medium effort by default. Set `--deep=low|medium|high|xhigh` to choose the effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
+`--deep` opts into Exa Agent with medium effort by default. Set `--deep=low|medium|high|xhigh` to choose the effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). The plugin deliberately does not offer Exa's metered `auto` and `ultra` efforts, so a `--deep` run always has a fixed price. When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
 
 ### Trove
 
