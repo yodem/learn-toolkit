@@ -37,7 +37,7 @@ measures and why it matters. A table is never the first thing the user sees.
 CRITICAL: follow the phases in order. Each phase has a verification gate — do not
 proceed until it passes. The **only** hard stop in this entire workflow is zero
 available search backends (Phase 0). Every other missing tool — NotebookLM, Trove,
-Sefaria, one of the two search backends — degrades the run instead of stopping it.
+Sefaria, one of the search backends — degrades the run instead of stopping it.
 
 ## Instructions
 
@@ -128,7 +128,7 @@ token is wrong; re-enter it with `/plugin configure learn-toolkit@learn-toolkit-
 
 **The only hard stop in the workflow:** if `HAS_TAVILY`, `HAS_EXA` and `HAS_WEB_RESEARCH` are all false,
 halt before Phase 0.5 (see the Error Recovery table below for the exact directive). Show
-setup instructions for both and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
+setup instructions for every missing backend and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
 after fixing the above." Do not fall back to bare `WebSearch`.
 
 If Tavily is missing:
@@ -577,7 +577,7 @@ indefinitely or produces a false stale-state warning.
 
 | Error | Cause | Action |
 |-------|-------|--------|
-| Both Tavily and Exa unavailable | Neither MCP nor CLI configured, no keys | **STOP workflow.** Show setup instructions for both. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
+| Tavily, Exa and web-research all unavailable | No Tavily MCP or CLI, no Exa, no web-research server | **STOP workflow.** Show setup instructions for each missing backend. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
 | Tavily CLI auth fails (`tvly auth`) | Not logged in | Set `HAS_TAVILY_CLI_AUTH=false`; keep `HAS_TAVILY_SKILLS=true` for search and extract, and ask the user to run `tvly login` for full CLI access |
 | Tavily MCP returns `Invalid Tavily API key` | Tavily key is blank or invalid | Set `HAS_TAVILY_MCP=false`; use `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | web-research `needs authentication` / 401 | Token is wrong or blank | `HAS_WEB_RESEARCH=false`; continue on Tavily/Exa; tell the user to re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |

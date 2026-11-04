@@ -43,9 +43,9 @@ server lives at https://github.com/yodem/learn-toolkit/tree/main/infra/web-resea
 Also available to the user directly, outside `/learn`: the five prompts `research_package`,
 `debug_error`, `compare_technologies`, `evaluate_repository` and `check_service_health`,
 and the resources `package://{registry}/{name}`, `github://{owner}/{repo}`,
-`status://{service}`, `changelog://{registry}/{package}` and a domain-health resource.
+`status://{service}`, `changelog://{registry}/{package}` and `domain-health://report`.
 
-Most tools take a required `reasoning` string: one sentence on why the call is made.
+Most tools take an optional `reasoning` string (default empty); passing a one-line reason for the call is recommended.
 `crawl_url`, `batch_crawl_urls` and `stealth_scrape` take an optional `country` (two
 letters, e.g. `US`); leave it out unless geo-targeting matters.
 
