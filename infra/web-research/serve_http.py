@@ -38,8 +38,13 @@ BLOCKED_NETS = [
     )
 ]
 
-COUNTRY_RE = re.compile(r"^[A-Za-z]{2}$")
-URL_TOOLS = ("crawl_url", "batch_crawl_urls", "stealth_scrape", "extract_data", "api_docs")
+COUNTRY_RE = re.compile(r"[A-Za-z]{2}")  # used with fullmatch ("$" would accept a trailing newline)
+# check_service_status builds a URL from `service` (service_health.py:283, with only spaces, dots
+# and dashes stripped), so `x@169254169254#` becomes an internal URL. Real names need none of this.
+SERVICE_RE = re.compile(r"[A-Za-z0-9 ._-]{1,100}")
+URL_TOOLS = (
+    "crawl_url", "batch_crawl_urls", "stealth_scrape", "extract_data", "api_docs", "check_service_status",
+)
 
 
 def _ip_blocked(ip: ipaddress._BaseAddress) -> bool:
@@ -58,8 +63,14 @@ def _ip_blocked(ip: ipaddress._BaseAddress) -> bool:
 
 def guard_url(url: str) -> str | None:
     """Return a refusal text when `url` must not be fetched, else None."""
+    # urlsplit and Chromium parse some URLs differently (backslash, userinfo, control chars),
+    # so refuse the ambiguous forms outright instead of guessing which host gets fetched.
+    if any(c == "\\" or ord(c) < 32 or ord(c) == 127 or c.isspace() for c in url):
+        return f"{REFUSAL}: URL contains a backslash, whitespace or control character"
     try:
-        parts = urlsplit(url.strip())
+        parts = urlsplit(url)
+        if "@" in parts.netloc:
+            return f"{REFUSAL}: URLs with userinfo are not allowed"
         host = (parts.hostname or "").lower().rstrip(".")
     except ValueError:
         return f"{REFUSAL}: unparsable URL"
@@ -86,12 +97,17 @@ def guard_url(url: str) -> str | None:
 
 
 def guarded(fn):
-    """Wrap a tool coroutine: check `url`, `urls`, `api_name` (when a URL) and `country` first."""
+    """Wrap a tool coroutine.
+
+    Checks `url`, `urls`, the keys of `start_chars` (upstream fetches them too,
+    server.py:512-513), `api_name` when it is a URL, `service` and `country`.
+    """
     sig = inspect.signature(fn)
 
     @functools.wraps(fn)
     async def wrapper(*args, **kwargs):
-        bound = sig.bind_partial(*args, **kwargs).arguments
+        ba = sig.bind(*args, **kwargs)
+        bound = ba.arguments
         targets = []
         if isinstance(bound.get("url"), str):
             targets.append(bound["url"])
@@ -104,10 +120,26 @@ def guarded(fn):
             refusal = await asyncio.to_thread(guard_url, target)
             if refusal:
                 return refusal
+        service = bound.get("service")
+        if isinstance(service, str) and not SERVICE_RE.fullmatch(service):
+            return f"{REFUSAL}: invalid service name"
         country = bound.get("country")
-        if country and not COUNTRY_RE.match(country):
+        if country and not COUNTRY_RE.fullmatch(country):
             return "Refused: country must be a two-letter ISO code or empty"
-        return await fn(*args, **kwargs)
+        notes = []
+        offsets = bound.get("start_chars")
+        if isinstance(offsets, dict):
+            kept = {}
+            for key, offset in offsets.items():
+                refusal = await asyncio.to_thread(guard_url, str(key))
+                if refusal:
+                    notes.append(f"{refusal} (start_chars key dropped)")
+                else:
+                    kept[key] = offset
+            if notes:
+                bound["start_chars"] = kept
+        result = await fn(*ba.args, **ba.kwargs)
+        return "\n".join(notes + [result]) if notes else result
 
     return wrapper
 

@@ -11,7 +11,7 @@ An optional backend for `/learn`: [elad12390/web-research-assistant](https://git
   `PROXY_URL`, `EXA_API_KEY`, `PIXABAY_API_KEY`. Generate the token and secret with a random-string tool and write
   them straight into the file; never paste them in chat or commit them.
 - `.token` (mode 600): the same `WRA_TOKEN` value alone, for `smoke.py --token-file`.
-- Both are secrets. `.token` and `data/` are git-ignored; `.env` matches the `*.env` ignore rule.
+- Both are secrets. `.token` is git-ignored; `.env` matches the `*.env` ignore rule.
 
 ## Deploy
 
@@ -42,13 +42,14 @@ from the Evomi dashboard in the form `http://user:pass@<evomi-host>:<port>` into
 
 ## Logs
 
-`docker compose logs -f wra searxng`. `data/usage.json` holds the queries and URLs the tools were called with;
-treat it as private and delete it when you no longer need it.
+`docker compose logs -f wra searxng`. `/app/data/usage.json` (named volume `wra-data`) holds the queries and URLs the tools were
+called with; treat it as private. Read it with `docker compose exec wra cat /app/data/usage.json`;
+`docker compose down -v` deletes it.
 
 ## Take it down
 
-`docker compose down` (state lives in `./data`). Remove `.env`, `.token` and `data/` to
-wipe everything.
+`docker compose down` keeps the `wra-data` volume; `docker compose down -v` deletes it. Remove
+`.env` and `.token` to wipe the rest.
 
 ## Security notes
 
@@ -57,5 +58,10 @@ wipe everything.
 - URL tools (`crawl_url`, `batch_crawl_urls`, `stealth_scrape`, `extract_data`, `api_docs` with a URL) refuse
   loopback, private, link-local, Tailscale/CGNAT, unspecified and unresolvable hosts, plus the compose service names
   `searxng` and `wra`. `country` must be a two-letter code.
-- Residual risk: upstream follows redirects, so a public URL that redirects to an internal host is not caught.
+- Residual risk, redirects: upstream follows redirects, so a public URL that redirects to an internal host is not caught.
+- Residual risk, DNS rebinding: the guard resolves the name, then the fetcher resolves it again, so a rebinding DNS
+  name can answer public once and internal the next time. The real fix (an egress firewall, or pinning the resolved
+  IP into the fetch) is out of scope here.
+- Also refused: URLs containing a backslash, whitespace, control characters or userinfo (`user@host`), and
+  `check_service_status` names with characters other than letters, digits, space, dot, dash and underscore.
 - The guard wraps FastMCP's private tool registry; re-check it when the upstream pin moves.

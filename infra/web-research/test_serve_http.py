@@ -46,6 +46,21 @@ class GuardUrlTests(unittest.TestCase):
             with self.subTest(url=url):
                 self.assertIsNotNone(serve_http.guard_url(url))
 
+    def test_guard_refuses_ambiguous_forms(self):
+        for url in [
+            "http://127.0.0.1\\@example.com/",
+            "http://a@169.254.169.254/",
+            "http://exa mple.com/",
+            "http://x.com/a\rb",
+            "http://x.com/a\nb",
+            "http://x.com/a\x00b",
+            " https://example.com/",
+        ]:
+            with self.subTest(url=url):
+                refusal = serve_http.guard_url(url)
+                self.assertIsNotNone(refusal)
+                self.assertIn("blocked by ssrf guard", refusal)
+
     def test_guard_allows_public(self):
         self.assertIsNone(serve_http.guard_url("https://example.com/"))
 
@@ -71,6 +86,40 @@ class WrapToolTests(unittest.TestCase):
         self.assertIn("country", self._call(wrapped, url="https://example.com/", country="USA"))
         self.assertEqual(self._call(wrapped, url="https://example.com/", country="de"), "content")
         self.assertEqual(self._call(wrapped, url="https://example.com/"), "content")
+
+    def test_start_chars_keys_are_guarded(self):
+        seen = {}
+
+        async def batch_crawl_urls(urls: list[str], start_chars: dict | None = None,
+                                   country: str = "") -> str:
+            seen["start_chars"] = start_chars
+            return "content"
+
+        wrapped = serve_http.guarded(batch_crawl_urls)
+        out = self._call(
+            wrapped,
+            urls=["https://example.com"],
+            start_chars={"http://169.254.169.254/latest/meta-data/": 0, "https://example.com": 5},
+        )
+        self.assertIn("blocked by ssrf guard", out)
+        self.assertEqual(seen["start_chars"], {"https://example.com": 5})
+
+    def test_country_trailing_newline_refused(self):
+        async def crawl_url(url: str, country: str = "") -> str:
+            return "content"
+
+        out = self._call(serve_http.guarded(crawl_url), url="https://example.com/", country="US\n")
+        self.assertIn("country", out)
+
+    def test_service_name_validated(self):
+        async def check_service_status(service: str) -> str:
+            return "content"
+
+        wrapped = serve_http.guarded(check_service_status)
+        self.assertEqual(self._call(wrapped, service="GitHub Actions"), "content")
+        self.assertEqual(self._call(wrapped, service="aws-s3"), "content")
+        for bad in ["x@169254169254#", "a/b", "a:80", "a\\b"]:
+            self.assertIn("blocked by ssrf guard", self._call(wrapped, service=bad))
 
     def test_wrapper_checks_every_batch_url(self):
         async def batch_crawl_urls(urls: list[str]) -> str:

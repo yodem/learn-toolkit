@@ -1,7 +1,10 @@
 # Self-hosted web-research backend: SearXNG + elad12390/web-research-assistant behind a bearer-token
 # HTTP endpoint. Secrets come from the .env file next to this compose file (never committed).
 services:
+  # dns: the dev server's default resolver (the router, 10.100.102.1) returns NXDOMAIN for some
+  # public names (example.com), which breaks crawling and the SSRF guard's resolve-or-refuse rule.
   searxng:
+    dns: [1.1.1.1, 9.9.9.9]
     image: searxng/searxng@sha256:1f3720f59a0361592dc942e4be50e0ebb63c112d915883fcb78a011995fffb47
     volumes:
       - ./searxng:/etc/searxng:rw
@@ -16,6 +19,7 @@ services:
     restart: unless-stopped
 
   wra:
+    dns: [1.1.1.1, 9.9.9.9]
     build:
       context: .
       additional_contexts:
@@ -32,8 +36,12 @@ services:
       - SEARXNG_BASE_URL=http://searxng:8080/search
       - MCP_USAGE_LOG=/app/data/usage.json
     volumes:
-      - ./data:/app/data
+      # Named volume: uid 10001 can always write usage.json, whoever owns the host directory.
+      - wra-data:/app/data
     depends_on:
       searxng:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  wra-data:
