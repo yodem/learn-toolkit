@@ -129,15 +129,20 @@ class WrapToolTests(unittest.TestCase):
         out = self._call(wrapped, urls=["https://example.com/", "http://10.0.0.1/"])
         self.assertIn("blocked by ssrf guard", out)
 
-    def test_api_docs_name_checked_only_when_url(self):
-        async def api_docs(api_name: str) -> str:
+    def test_api_docs_name_charset(self):
+        calls = []
+
+        async def api_docs(api_name: str, topic: str = "") -> str:
+            calls.append(api_name)
             return "content"
 
         wrapped = serve_http.guarded(api_docs)
         self.assertEqual(self._call(wrapped, api_name="stripe"), "content")
-        self.assertIn(
-            "blocked by ssrf guard", self._call(wrapped, api_name="http://169.254.169.254/")
-        )
+        self.assertEqual(self._call(wrapped, api_name="Meta Graph API"), "content")
+        for bad in ["169.254.169.254#", "http://169.254.169.254/", "a/b", "a@b", "x" * 101, ""]:
+            with self.subTest(api_name=bad):
+                self.assertIn("blocked by ssrf guard", self._call(wrapped, api_name=bad))
+        self.assertEqual(calls, ["stripe", "Meta Graph API"])
 
 
 def _inner():

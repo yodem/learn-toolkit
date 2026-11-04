@@ -39,8 +39,7 @@ BLOCKED_NETS = [
 ]
 
 COUNTRY_RE = re.compile(r"[A-Za-z]{2}")  # used with fullmatch ("$" would accept a trailing newline)
-# check_service_status builds a URL from `service` (service_health.py:283, with only spaces, dots
-# and dashes stripped), so `x@169254169254#` becomes an internal URL. Real names need none of this.
+# Charset for names that upstream formats into URLs (check_service_status `service`, api_docs `api_name`).
 SERVICE_RE = re.compile(r"[A-Za-z0-9 ._-]{1,100}")
 URL_TOOLS = (
     "crawl_url", "batch_crawl_urls", "stealth_scrape", "extract_data", "api_docs", "check_service_status",
@@ -100,7 +99,7 @@ def guarded(fn):
     """Wrap a tool coroutine.
 
     Checks `url`, `urls`, the keys of `start_chars` (upstream fetches them too,
-    server.py:512-513), `api_name` when it is a URL, `service` and `country`.
+    server.py:512-513), `service`, `api_name` and `country`.
     """
     sig = inspect.signature(fn)
 
@@ -113,16 +112,17 @@ def guarded(fn):
             targets.append(bound["url"])
         if isinstance(bound.get("urls"), (list, tuple)):
             targets.extend(u for u in bound["urls"] if isinstance(u, str))
-        name = bound.get("api_name")
-        if isinstance(name, str) and re.match(r"^\s*[A-Za-z][A-Za-z0-9+.-]*://", name):
-            targets.append(name)
         for target in targets:
             refusal = await asyncio.to_thread(guard_url, target)
             if refusal:
                 return refusal
-        service = bound.get("service")
-        if isinstance(service, str) and not SERVICE_RE.fullmatch(service):
-            return f"{REFUSAL}: invalid service name"
+        # `service` and `api_name` are formatted into URLs upstream (service_health.py:283,
+        # api_docs.py:381), so `169.254.169.254#` would become an internal URL. Names need no
+        # more than letters, digits, space, dot, dash and underscore.
+        for key in ("service", "api_name"):
+            value = bound.get(key)
+            if isinstance(value, str) and not SERVICE_RE.fullmatch(value):
+                return f"{REFUSAL}: invalid {key}"
         country = bound.get("country")
         if country and not COUNTRY_RE.fullmatch(country):
             return "Refused: country must be a two-letter ISO code or empty"

@@ -62,6 +62,11 @@ called with; treat it as private. Read it with `docker compose exec wra cat /app
 - Residual risk, DNS rebinding: the guard resolves the name, then the fetcher resolves it again, so a rebinding DNS
   name can answer public once and internal the next time. The real fix (an egress firewall, or pinning the resolved
   IP into the fetch) is out of scope here.
+- Residual risk, search-result URLs: some tools crawl URLs they get from search results (for example `api_docs`
+  falls back to SearXNG hits, `server.py:1690-1700`). The wrapper cannot see those URLs, so a public hostname that
+  resolves to an internal IP could be fetched. The real fix is an egress firewall: a `DOCKER-USER` iptables rule that
+  drops traffic from the `wra` container to RFC1918, link-local and `100.64.0.0/10`. That is a follow-up and needs
+  sudo on the dev server.
 - Also refused: URLs containing a backslash, whitespace, control characters or userinfo (`user@host`), and
-  `check_service_status` names with characters other than letters, digits, space, dot, dash and underscore.
+  `check_service_status` `service` and `api_docs` `api_name` values with characters other than letters, digits, space, dot, dash and underscore.
 - The guard wraps FastMCP's private tool registry; re-check it when the upstream pin moves.
