@@ -62,7 +62,7 @@ called with; treat it as private. Read it with `docker compose exec wra cat /app
 
 - Every request except `GET /healthz` needs `Authorization: Bearer <WRA_TOKEN>` (constant-time compare);
   DNS-rebinding protection is on with an allowed-host list.
-- URL tools (`crawl_url`, `batch_crawl_urls`, `stealth_scrape`, `extract_data`, `api_docs` with a URL) refuse
+- URL tools (`crawl_url`, `batch_crawl_urls`, `stealth_scrape`, `extract_data`) refuse
   loopback, private, link-local, Tailscale/CGNAT, unspecified and unresolvable hosts, plus the compose service names
   `searxng` and `wra`. `country` must be a two-letter code.
 - Residual risk, redirects: upstream follows redirects, so a public URL that redirects to an internal host is not caught.
