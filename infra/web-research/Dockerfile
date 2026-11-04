@@ -10,6 +10,13 @@ WORKDIR /app
 COPY --from=upstream requirements.txt pyproject.toml ./
 RUN uv pip install --system --no-cache -r requirements.txt
 
+# Override: Scrapling 0.4.12 hard-codes Chrome 149 (fingerprints.py:16-17), and the locked
+# apify-fingerprint-datapoints 0.14.0 has no Linux desktop entry for it, so browserforge raises
+# "No headers based on this input can be generated" and stealth_scrape fails. Drop this line and
+# the check below when upstream bumps the dependency.
+RUN uv pip install --system --no-cache apify-fingerprint-datapoints==0.15.0
+RUN python -c "from scrapling.engines.toolbelt.fingerprints import generate_headers; generate_headers(browser_mode=True)"
+
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN playwright install --with-deps chromium
 

@@ -5,6 +5,13 @@ An optional backend for `/learn`: [elad12390/web-research-assistant](https://git
 `http://<WRA_BIND_IP>:8765/mcp`. Upstream is pinned to commit `f41d3fb` and the SearXNG image to a digest (see
 `docker-compose.yml`). The plugin works without it.
 
+## Pins
+
+- Upstream commit `f41d3fb`, SearXNG image digest, uv `0.12.1`.
+- Override: `apify-fingerprint-datapoints==0.15.0` (upstream locks 0.14.0, which has no Chrome 149 Linux fingerprint, so
+  `stealth_scrape` fails with browserforge `No headers based on this input can be generated`). The Dockerfile asserts at
+  build time that headers can be generated; drop the override when upstream bumps it.
+
 ## Files you fill yourself
 
 - `.env` (mode 600), copied from `.env.example`: `WRA_BIND_IP`, `WRA_TOKEN`, `SEARXNG_SECRET`, and optionally
