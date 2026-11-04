@@ -249,7 +249,14 @@ accumulating every subagent's raw exploration.
 - Exa subagents use the discovered full tool names ending in
   `__web_search_advanced_exa`, `__web_search_exa`, and `__web_fetch_exa`. Use advanced
   search for targeted queries (category, domains, date filters, highlights with a
-  `highlightsQuery`) and regular search for broad checks. Triage on highlights, then fetch
+  `highlightsQuery`) and regular search for broad checks. On advanced search set `type`:
+  `"lite"` for triage and broad checks (cheapest, cached content; it accepts only query,
+  numResults, category, domain and published-date filters, userLocation, moderation,
+  textMaxCharacters and the highlights fields, and answers HTTP 400 for anything else),
+  `"auto"` whenever the call needs `additionalQueries`, `subpages`, summaries or
+  `maxAgeHours`. Never use the legacy `fast` or `instant`. Cap highlights with
+  `highlightsMaxCharacters` (the sentence and per-URL highlight fields are deprecated).
+  Regular search requires an `objective` next to `query`. Triage on highlights, then fetch
   the 3-5 keepers with `maxCharacters: 4000`; request one content view per call. Allowed
   categories: `publication`, `personal site`, `news`, `company`, `people`, and
   financial report. Put recency in query wording; use published-date filters only for
