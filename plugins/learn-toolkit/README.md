@@ -88,6 +88,7 @@ resolved domain's file in full before dispatching any research.
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
 | Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the Trove offer are unaffected |
+| web-research | Optional, self-hosted | Free SearXNG search, batch search and crawl, stealth scraping, package/GitHub/changelog/API-docs lookups | Only the web-research server shows as failed; every other backend works unchanged |
 
 ### NotebookLM is optional
 
@@ -171,6 +172,17 @@ Install [notebooklm-mcp](https://github.com/nicholasgriffintn/notebooklm-mcp), t
 ```bash
 nlm login
 ```
+
+### web-research (optional, self-hosted)
+
+A self-hosted server ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, 16 tools) that adds free, unlimited SearXNG search, stealth scraping, an optional residential proxy (`PROXY_URL`, e.g. Evomi, where the `country` argument routes a request through that country), and package, GitHub, changelog and API-docs lookups. Deployment steps are in [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research).
+
+Set two plugin settings with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then run `/reload-plugins`:
+
+- `web_research_url`: `http://<WRA_BIND_IP>:8765/mcp`
+- `web_research_token`: the server's token (sensitive; enter it in the configure prompt, never in chat)
+
+Both are optional. With the URL blank, only the web-research server fails ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as "needs authentication" in `/mcp`.
 
 ## API key safety
 

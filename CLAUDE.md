@@ -102,6 +102,16 @@ earlier releases are gone; the scan is now always-on and the write is always an
 interactive prompt. Trove is never required — the workflow skips both the scan and
 the offer silently if `trove` is not installed.
 
+### Step 3c: web-research (optional, self-hosted)
+
+An optional fourth backend: [elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, run in Docker from [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research). It adds free SearXNG search, batch search and crawl, stealth scraping, an optional residential proxy (`PROXY_URL`; the `country` argument routes through that country), and package, GitHub, changelog and API-docs lookups.
+
+If the user wants it:
+- Deploy the server from the infra README. The user writes the token and secret into the server's `.env` and `.token` files; never ask for them or paste them in chat.
+- Set `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then `/reload-plugins`. The user types the token into the configure prompt.
+
+Both settings are optional. A blank URL fails only the web-research server ("URL is unset or invalid"); Tavily and Exa still connect. A wrong token shows as "needs authentication" in `/mcp`.
+
 ### Step 4: Confirm
 
 Tell the user:
@@ -116,6 +126,7 @@ Plugin **learn-toolkit** installed. Here's what you have:
 | Trove (optional) | Automatic library scan + end-of-run write offer, if `trove` CLI installed |
 | NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
 | Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`tvly init --agent claude-code`) |
+| web-research (optional, self-hosted) | Search, crawl and package tools, if `web_research_url` and token are set (Step 3c) |
 
 **After installation (keys optional):**
 ```
