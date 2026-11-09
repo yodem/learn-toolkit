@@ -284,12 +284,14 @@ weakest subagent with a broadened query before proceeding.
 This is Phase 1b; it runs after the regular search fan-out.
 
 Skip silently unless `$DEEP_EFFORT` is set. If `HAS_EXA_AGENT` is false and
-`HAS_TAVILY_RESEARCH_CLI` and `HAS_TAVILY_CLI_AUTH` are both true, use the CLI fallback:
+`HAS_TAVILY_RESEARCH_CLI` and `HAS_TAVILY_CLI_AUTH` are both true, use the CLI fallback.
+`--output-schema` takes a file path, not inline JSON, so first run `mktemp -d`, keep the
+literal path as `OUT`, and Write the outputSchema below to `$OUT/deep-schema.json`. Then run
 `tvly research "<question>" --model pro --citation-format numbered --no-wait
---output-schema '<the outputSchema below>' --json`, then poll with
-`tvly research poll <request_id> --json` every 30 seconds, at most 10 times, until
-`completed` or `failed`; past the cap, report the request ID and continue without deep
-results.
+--output-schema "$OUT/deep-schema.json" --json`, and check it with
+`tvly research status <request_id> --json` (one check per call; `poll` blocks for up to
+10 minutes) every 30 seconds, at most 10 times, until `completed` or `failed`; past the
+cap, report the request ID and continue without deep results.
 If `HAS_EXA_AGENT` is false and the authenticated Tavily CLI fallback is unavailable,
 print one notice: `--deep` needs an Exa key — run
 `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then continue.
