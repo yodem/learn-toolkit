@@ -56,11 +56,19 @@ learn-toolkit/                                  # Repository root — marketplac
 ├── .claude-plugin/
 │   └── marketplace.json                        # Marketplace catalog for /plugin install
 ├── README.md                                   # This file
+├── CLAUDE.md                                   # AI-assistant install guide; imports AGENTS.md
+├── AGENTS.md                                   # Rules for agents working in this repo
 ├── LICENSE
-└── plugins/learn-toolkit/                      # The installable plugin (v2.2.1)
+├── .claude/                                    # Repo deny rules + Stop hook that runs the tests
+├── .github/workflows/ci.yml                    # CI: maintainer tests on PRs and main
+├── maintainer/                                 # Backend drift checker + tests (not shipped)
+├── infra/web-research/                         # Optional self-hosted web-research server
+├── docs/superpowers/                           # Design specs and plans
+└── plugins/learn-toolkit/                      # The installable plugin (v2.3.0)
     ├── .claude-plugin/plugin.json               # Plugin manifest
-    ├── .mcp.json                                # MCP servers (Tavily, Exa, Exa Agent) with sensitive userConfig headers
+    ├── .mcp.json                                # MCP servers (tavily, exa, exa-agent, web-research); keys from userConfig
     ├── hooks/                                   # Output/artifact validation hooks
+    ├── scripts/lint-skill.sh                    # Skill lint (13 checks); run before committing
     ├── references/setup-guide.md                # AI-assistant install walkthrough
     ├── README.md                                # Full plugin documentation — start here
     └── skills/learn/                            # The one skill: /learn-toolkit:learn
@@ -69,7 +77,8 @@ learn-toolkit/                                  # Repository root — marketplac
             ├── domains/{tech,philosophy,judaism}.md
             ├── notebooklm-loading.md
             ├── artifact-generation.md
-            └── trove-integration.md
+            ├── trove-integration.md
+            └── web-research.md
 ```
 
 ## License
