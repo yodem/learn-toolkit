@@ -51,7 +51,7 @@ Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` u
 curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
-Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, on older versions, `uv tool upgrade tavily-cli`. `/learn` tries that upgrade once itself.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, on older versions, `uv tool upgrade tavily-cli`. `/learn` tries that upgrade once itself. From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`.
 
 The workflow checks CLI authentication with:
 
@@ -77,12 +77,12 @@ generation:
 - If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your
   topic, save it locally, and offer the Trove write — it just skips the notebook
   package (phases 3-5 as one unit) with a single notice. Add NotebookLM later from
-  https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time
+  https://github.com/jacob-bd/gemini-notebook-mcp-cli, or pass `--no-notebook` any time
   to skip it deliberately."
 
 ### Step 3b: Trove (optional)
 
-If the user has `candlekeep-cloud` installed (with the `trove` CLI available),
+If the user has the Trove plugin (`trove@trove`) installed, with the `trove` CLI on `PATH`,
 `/learn-toolkit:learn` will automatically:
 - **Scan the library** via the `library` subagent, dispatched as part of Phase 1's
   parallel research fan-out, for existing knowledge on the topic — this runs
@@ -107,7 +107,7 @@ Tell the user:
 
 ---
 
-Plugin **learn-toolkit** (v2.2.1) installed. Here's what you have:
+Plugin **learn-toolkit** (v2.3.0) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|

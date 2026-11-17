@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-output.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/validate-output.sh",
             "statusMessage": "Validating learn-toolkit output structure..."
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/verify-artifacts.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/verify-artifacts.sh",
             "statusMessage": "Verifying learn-toolkit artifacts were generated..."
           }
         ]

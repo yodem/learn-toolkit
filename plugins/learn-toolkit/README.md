@@ -19,7 +19,7 @@ and offers to file the session into a Trove field-research book.
 
 Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). Never paste keys in chat.
+For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`. Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily or Exa to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
@@ -122,7 +122,7 @@ Since Exa 3.0 (Oct 2026) subagents pick an advanced-search `type`: `lite` for ch
 
 ### Trove
 
-If the `trove` CLI is on your `PATH` (install via the `candlekeep-cloud` plugin),
+If the `trove` CLI is on your `PATH` (install the Trove plugin, `trove@trove`),
 `/learn-toolkit:learn` will:
 
 - **Scan the library** via the `library` subagent, one of the parallel subagents
@@ -164,12 +164,12 @@ Sefaria is never substituted with open-web search for the primary text.
 
 ### Trove (optional)
 
-Install the `candlekeep-cloud` plugin so the `trove` CLI is on your `PATH`. Detected
+Install the Trove plugin (`trove@trove`) so the `trove` CLI is on your `PATH`. Detected
 automatically — no configuration in this plugin.
 
 ### NotebookLM (optional)
 
-Install [notebooklm-mcp](https://github.com/nicholasgriffintn/notebooklm-mcp), then:
+Install [notebooklm-mcp-cli](https://github.com/jacob-bd/gemini-notebook-mcp-cli), then:
 
 ```bash
 nlm login
@@ -245,12 +245,14 @@ hit.
 ```
 learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
-│   └── plugin.json                            # Plugin manifest (name, version 2.2.1)
-├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent); keys from userConfig
+│   └── plugin.json                            # Plugin manifest (name, version 2.3.0)
+├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent, web-research); keys from userConfig
 ├── hooks/
 │   ├── hooks.json
 │   ├── validate-output.sh
 │   └── verify-artifacts.sh
+├── scripts/
+│   └── lint-skill.sh                           # Skill lint (see Development)
 ├── references/
 │   └── setup-guide.md                          # AI-assistant install walkthrough
 ├── README.md                                   # This file
@@ -265,14 +267,15 @@ learn-toolkit/                                 # Plugin root (plugins/learn-tool
             │   └── judaism.md
             ├── notebooklm-loading.md           # Notebook overflow logic
             ├── artifact-generation.md          # NotebookLM tool signatures
-            └── trove-integration.md       # Trove read/write reference
+            ├── trove-integration.md            # Trove read/write reference
+            └── web-research.md                 # web-research tool reference
 ```
 
 ## Development
 
 Run `bash scripts/lint-skill.sh` from the plugin root before committing any change to
 `skills/learn/SKILL.md` or its references — it derives everything from the files at
-runtime, so it stays meaningful as the skill evolves. It checks:
+runtime, so it stays meaningful as the skill evolves. It runs 13 checks; the first seven:
 
 1. **Undefined variables** — every `$VAR` used in `SKILL.md` is assigned or derived
    somewhere in the file, aside from a small whitelist of real environment variables.
@@ -289,6 +292,10 @@ runtime, so it stays meaningful as the skill evolves. It checks:
    actually present on disk.
 7. **Phase numbering** — `### Phase N` headings in `SKILL.md` are non-decreasing, with no
    duplicates or out-of-order phases.
+
+The other six check the MCP config, no hardcoded MCP tool prefixes, no env-var key advice
+and bounded `agent_run` polling, and that web-research stays optional, uses known tool
+names and appears in the routing matrix.
 
 Exits 0 on a clean run, 1 with a `FAIL: <check> — <detail>` line per finding otherwise.
 

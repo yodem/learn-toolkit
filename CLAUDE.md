@@ -1,5 +1,9 @@
 # Setup Instructions for AI Assistants
 
+Working on the repo itself (not installing it)? The rules and checks are in AGENTS.md:
+
+@AGENTS.md
+
 This repository is a **Claude Code plugin**. When a user shares this repo URL, guide them through the plugin install — do NOT manually copy skill files.
 
 ## Quick install (preferred)
@@ -55,7 +59,7 @@ curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
 
-Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, below 0.1.8, `uv tool upgrade tavily-cli`; `/learn` tries this once itself. Run `tvly login` if authentication is needed.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, below 0.1.8, `uv tool upgrade tavily-cli`; `/learn` tries this once itself. Run `tvly login` if authentication is needed. From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`.
 
 **Check auth with `tvly auth`, not `tvly --status`** — the latter prints a two-part
 banner whose auth line is lost when piped, giving a false negative. `/learn-toolkit:learn`
@@ -65,7 +69,7 @@ itself checks with `tvly auth` for exactly this reason:
 tvly auth
 ```
 
-This installs 8 skills:
+This installs Tavily's agent skills, among them:
 - `/tavily-search` — LLM-optimized web search
 - `/tavily-extract` — Extract content from URLs
 - `/tavily-crawl` — Crawl websites to local markdown
@@ -81,7 +85,7 @@ This installs 8 skills:
 
 If the user wants podcast/infographic/mind-map/flashcard generation:
 - Check if they have `notebooklm-mcp` installed
-- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic, save it locally, and offer the Trove write — it just won't generate a podcast, infographic, mind map, flashcards, or study guide. Add it later from https://github.com/nicholasgriffintn/notebooklm-mcp, or pass `--no-notebook` any time to skip it deliberately."
+- If not: "NotebookLM is optional. `/learn-toolkit:learn` will still research your topic, save it locally, and offer the Trove write — it just won't generate a podcast, infographic, mind map, flashcards, or study guide. Add it later from https://github.com/jacob-bd/gemini-notebook-mcp-cli (`uv tool install notebooklm-mcp-cli`), or pass `--no-notebook` any time to skip it deliberately."
 
 When NotebookLM is absent, or when the user passes `--no-notebook`, the workflow's Phase
 3-5 (notebook creation + artifact generation) skip together as one unit. Research, local
@@ -89,7 +93,7 @@ file output, and the Trove offer are unaffected — NotebookLM is never a blocke
 
 ### Step 3b: Trove (optional)
 
-If the user has `candlekeep-cloud` installed (with the `trove` CLI available),
+If the user has the Trove plugin (`trove@trove`) installed, with the `trove` CLI on `PATH`,
 `/learn-toolkit:learn` will automatically:
 - **Scan the library** for existing documents on the topic before researching — this
   runs unconditionally on every domain, with no flag to disable it.
@@ -166,5 +170,5 @@ tvly crawl "https://docs.example.com" --output-dir ./docs/
 
 - **NEVER ask for, display, or log API key values.** Not in chat, not in tool calls, not in file contents.
 - If a user accidentally pastes a key, warn them to rotate it immediately
-- The plugin bundles MCP configs via `.mcp.json`; API keys come from the plugin's `userConfig` (system keychain) — no manual settings.json editing needed
-- If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to manual skill installation using the skill files in `plugins/learn-toolkit/skills/` (see Option C in README)
+- The plugin bundles MCP configs (tavily, exa, exa-agent, web-research) via `.mcp.json`; API keys come from the plugin's `userConfig` (system keychain) — no manual settings.json editing needed
+- If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to manual skill installation using the skill files in `plugins/learn-toolkit/skills/` (see Option B in README)
