@@ -38,7 +38,8 @@ official docs > source code / repos > library (Trove) > practitioner discussion 
 
 ## Query Patterns
 
-Tavily — one focused query per subagent, recency via parameter, never via query text:
+Tavily — one focused query per assigned intent (docs, community, and any intent moved to
+this lane), recency via parameter, never via query text:
 
 `$OUT` is the subagent's own `mktemp -d` directory (see SKILL.md Phase 1); paste its
 literal path.

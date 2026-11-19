@@ -331,10 +331,15 @@ accumulating every subagent's raw exploration.
   relevant pages, and return the same digest contract (`kind: "library"`).
 
 **Verification gate:** every dispatched subagent returned at least one digest entry, and
-combined the roster produced at least 5 unique URLs/sources. If fewer, re-dispatch the
-weakest subagent with a broadened query before proceeding. A Firecrawl subagent whose MCP and
-CLI routes were both refused or unavailable is exempt from this gate and is never re-dispatched in the same run; pick
-the weakest of the other subagents instead. Report the fan-out as `k of N subagents returned`
+combined the roster produced at least 5 unique URLs/sources. If not, run **one** recovery
+round, then proceed whatever it returns:
+
+1. A web lane that failed or came back empty is replaced by the next available backend
+   not in `$LANES` (domain order), which takes over that lane's query intents.
+2. With no spare backend, re-dispatch the weakest subagent once with a broadened query.
+   A lane whose backend was refused (for Firecrawl: both MCP and CLI routes) is never
+   re-dispatched in the same run; pick the weakest of the other subagents instead.
+ Report the fan-out as `k of N subagents returned`
 in the final report, naming any lane that was refused or empty.
 
 ### Deep research (only with --deep)
