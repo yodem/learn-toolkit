@@ -21,7 +21,7 @@ Installation prompts for both optional keys and stores them in the system keycha
 
 For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`. Never paste keys in chat.
 
-The workflow needs **at least one** of Tavily, Exa or Firecrawl to run at all; everything else
+The workflow needs **at least one** of Tavily, Exa, Firecrawl or web-research to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
 [Backends](#backends) below.
 

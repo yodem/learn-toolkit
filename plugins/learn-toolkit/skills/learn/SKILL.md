@@ -318,7 +318,9 @@ accumulating every subagent's raw exploration.
   signed-in CLI when the MCP is missing or refused; either way at most 2
   `firecrawl_search` calls and 3 `firecrawl_scrape` calls (on its own search results) per subagent, markdown only,
   main content only; digests only. On a keyless limit or refusal (`KEYLESS_*`, 403,
-  429, "daily limit") stop calling Firecrawl and return what you have.
+  429, "daily limit") switch to the CLI when `HAS_FIRECRAWL_CLI` (the same budget, counted
+  across both routes); otherwise, or when the CLI also fails or is out of credits, stop
+  calling Firecrawl and return what you have.
 - web-research subagents (only when `HAS_WEB_RESEARCH`) follow
   `${CLAUDE_SKILL_DIR}/references/web-research.md`: one batch call per lane, digests only.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
@@ -330,8 +332,8 @@ accumulating every subagent's raw exploration.
 
 **Verification gate:** every dispatched subagent returned at least one digest entry, and
 combined the roster produced at least 5 unique URLs/sources. If fewer, re-dispatch the
-weakest subagent with a broadened query before proceeding. A Firecrawl subagent that hit a
-keyless refusal is exempt from this gate and is never re-dispatched in the same run; pick
+weakest subagent with a broadened query before proceeding. A Firecrawl subagent whose MCP and
+CLI routes were both refused or unavailable is exempt from this gate and is never re-dispatched in the same run; pick
 the weakest of the other subagents instead. Report the fan-out as `k of N subagents returned`
 in the final report, naming any lane that was refused or empty.
 
@@ -661,7 +663,7 @@ indefinitely or produces a false stale-state warning.
 | web-research `failed` with `AUTH_HEADER_REJECTED` (401) | Token is wrong or blank | `HAS_WEB_RESEARCH=false`; continue on Tavily/Exa; tell the user to re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | web-research unreachable | Tailnet down or server stopped | `HAS_WEB_RESEARCH=false`; continue on the other backends |
 | web-research returns zero results | Search engines blocked or empty | Treat as a failed lane; lean on Tavily and Exa |
-| Firecrawl keyless call refused (`KEYLESS_*`, 403 or 429, "daily limit") | Free-tier rate limit, or a VPN/proxy network it does not accept | Drop the Firecrawl lane for this run; continue on the other backends. Mention it once in the final report |
+| Firecrawl keyless call refused (`KEYLESS_*`, 403 or 429, "daily limit") | Free-tier rate limit, or a VPN/proxy network it does not accept | Switch the lane to the signed-in CLI when `HAS_FIRECRAWL_CLI`; drop the lane only when the CLI is unavailable, fails or is out of credits. Continue on the other backends and mention it once in the final report |
 | Firecrawl MCP not found | Not connected | `/mcp` reconnect `plugin:learn-toolkit:firecrawl`; no key needed. Continue on the other backends |
 | Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
 | Tavily MCP fails at connect with HTTP 401 `AUTH_HEADER_REJECTED` ("Server rejected the configured Authorization header") | `tavily_api_key` stale, or blank (Tavily then asks for OAuth, which the plugin cannot complete) | `HAS_TAVILY_MCP=false`; continue on the `tvly` CLI; tell the user to re-enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
