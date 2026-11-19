@@ -88,7 +88,7 @@ resolved domain's file in full before dispatching any research.
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
 | Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the Trove offer are unaffected |
-| Firecrawl | Optional, keyless free tier | `firecrawl_search`, plus `firecrawl_scrape` for JS-heavy pages and public PDFs the other lanes return thin; no key or account | Rate-limited and refused on some VPNs/proxies: the lane drops out and the run continues |
+| Firecrawl | Optional, keyless free tier | `firecrawl_search`, plus `firecrawl_scrape` on its own results, favouring JS-heavy pages and public PDFs; no key or account | Rate-limited and refused on some VPNs/proxies: the lane drops out and the run continues |
 | web-research | Optional, self-hosted | Free SearXNG search, batch search and crawl, stealth scraping, package/GitHub/changelog/API-docs lookups | Only the web-research server shows as failed; every other backend works unchanged |
 
 ### NotebookLM is optional

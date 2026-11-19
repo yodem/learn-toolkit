@@ -22,7 +22,7 @@ PDF/DOCX URLs.
 | Tool | When `/learn` uses it |
 |------|-----------------------|
 | `firecrawl_search` | The `firecrawl` lane: one or two discovery queries. Pass `query`, `limit` (≤ 5) and an `objective` sentence describing the ideal page. Use `includeDomains` for docs or repo targets |
-| `firecrawl_scrape` | Fetch a keeper as markdown when Tavily extract or Exa fetch returned an empty shell, a JS placeholder or a PDF. Pass `url`, `formats: ["markdown"]`, `onlyMainContent: true` |
+| `firecrawl_scrape` | Fetch up to 3 keepers from the lane's own search results as markdown, favouring JS-heavy pages and public PDFs (it runs in parallel with the other lanes, so it never waits on their URLs). Pass `url`, `formats: ["markdown"]`, `onlyMainContent: true` |
 | `firecrawl_parse` | A local document (PDF, DOCX, XLSX, HTML) the user handed to the run. Public document URLs go through `firecrawl_scrape` instead |
 
 ## Budget and limits
@@ -31,7 +31,7 @@ PDF/DOCX URLs.
   tier is rate-limited per network, and a parallel fan-out shares one limit.
 - Never request `screenshot`, `branding` or HTML formats; markdown only.
 - A refusal (`KEYLESS_*` error, HTTP 403 or 429, or "daily limit") ends the Firecrawl lane
-  for the run. Do not retry, and do not route around the limit through another client.
+  for the run; the Phase 1 gate exempts it and never re-dispatches it. Do not retry, and do not route around the limit through another client.
   Calls from VPNs and proxies may be refused outright.
 - When the server's response ends with a sign-up line, report it once in the final report;
   never sign up or ask for a key during the run.

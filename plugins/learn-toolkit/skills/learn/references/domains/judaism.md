@@ -27,7 +27,7 @@ Optional extra role, dispatched in the same message only when `HAS_WEB_RESEARCH`
 Optional extra role, dispatched in the same message only when `HAS_FIRECRAWL`:
 
 - **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
-  `firecrawl_scrape` for up to 3 keepers the other lanes returned thin, JS-rendered or as
+  `firecrawl_scrape` for up to 3 of its own results, favouring JS-heavy pages and public
   PDFs; see `../firecrawl.md`. Secondary only, like `secondary`: never in place of Sefaria.
 
 ## Source Ranking

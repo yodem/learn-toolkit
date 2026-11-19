@@ -276,7 +276,7 @@ accumulating every subagent's raw exploration.
   and says so in its digest.
 - Firecrawl subagents (only when `HAS_FIRECRAWL`) follow
   `${CLAUDE_SKILL_DIR}/references/firecrawl.md`: keyless free tier, so at most 2
-  `firecrawl_search` calls and 3 `firecrawl_scrape` calls per subagent, markdown only,
+  `firecrawl_search` calls and 3 `firecrawl_scrape` calls (on its own search results) per subagent, markdown only,
   main content only; digests only. On a keyless limit or refusal (`KEYLESS_*`, 403,
   429, "daily limit") stop calling Firecrawl and return what you have.
 - web-research subagents (only when `HAS_WEB_RESEARCH`) follow
@@ -290,7 +290,9 @@ accumulating every subagent's raw exploration.
 
 **Verification gate:** every dispatched subagent returned at least one digest entry, and
 combined the roster produced at least 5 unique URLs/sources. If fewer, re-dispatch the
-weakest subagent with a broadened query before proceeding.
+weakest subagent with a broadened query before proceeding. A Firecrawl subagent that hit a
+keyless refusal is exempt from this gate and is never re-dispatched in the same run; pick
+the weakest of the other subagents instead.
 
 ### Deep research (only with --deep)
 
