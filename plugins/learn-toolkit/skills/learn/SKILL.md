@@ -158,9 +158,8 @@ toward `$WEB_LANES`. When it is false, print the `[Web research ✗]` note below
 user sees that the run lost its free lane, then continue.
 
 When `HAS_TAVILY` and `HAS_EXA` are both false, the web lanes come from Firecrawl alone (see
-Phase 0.5) plus web-research. Stop with the setup instructions above only when every
-search lane, the web-research `web` role included, returned nothing in Phase 1; a run with
-web-research sources continues.
+Phase 0.5) plus web-research. A run that then finds nothing at all is stopped by the
+Phase 1 verification gate.
 
 If Tavily is missing:
 > **Tavily is not connected.**
@@ -333,8 +332,10 @@ accumulating every subagent's raw exploration.
 
 **Verification gate:** every dispatched subagent returned at least one digest entry, and
 combined the roster produced at least 5 unique URLs/sources. If not, run **one** recovery
-round, then proceed. If the web lanes and the `web` role still returned zero sources after
-it, stop with the Phase 0 setup instructions instead of synthesizing from nothing.
+round, then proceed. If the whole roster (Sefaria and Trove included) still returned zero
+sources after it, stop with the Phase 0 setup instructions instead of synthesizing from
+nothing; if only the web side came back empty, continue on the primary and library
+sources with a one-line degraded-web notice.
 
 1. A web lane that failed or came back empty is replaced by the next available backend
    not in `$LANES` (domain order), which takes over that lane's query intents.
