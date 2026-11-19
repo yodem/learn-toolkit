@@ -19,7 +19,7 @@ claude plugin install learn-toolkit@learn-toolkit-marketplace
 
 This installs the single skill and configures MCP servers automatically:
 - `/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]`
-  — domain-aware deep research across Tavily, Exa, Sefaria, and Trove (formerly CandleKeep), with an
+  — domain-aware deep research across Tavily, Exa, keyless Firecrawl, Sefaria, and Trove (formerly CandleKeep), with an
   optional NotebookLM learning package.
 
 ### Step 2: Set up API keys
@@ -95,6 +95,12 @@ If the user has the Trove plugin (`trove@trove`) installed, with the `trove` CLI
 There is no `--ck-write` or `--no-ck-read` flag in this version. Trove is never
 required — the workflow skips both phases silently if `trove` is not installed.
 
+### Step 3b-2: Firecrawl (keyless, no setup)
+
+The plugin bundles Firecrawl's hosted MCP server (`https://mcp.firecrawl.dev/v2/mcp`) on its keyless free tier: `firecrawl_search`, `firecrawl_scrape` and `firecrawl_parse` work with no key or account. It is rate-limited per network and may refuse calls from VPNs or proxies. For a signed-in fallback, run `npx -y firecrawl-cli@latest init --all --browser` and sign in on the website (free account); `/learn` uses the CLI when the MCP is missing or refused, and otherwise drops the Firecrawl lane and continues.
+
+`/learn` runs two web-search subagents (Tavily, Exa, Firecrawl) by default, one for a simple subject and three for a complex one; the self-hosted web-research open search runs on every run when it is connected. If `/mcp` shows it failed, reconnect `plugin:learn-toolkit:firecrawl`.
+
 ### Step 3c: web-research (optional, self-hosted)
 
 An optional self-hosted backend ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, 16 tools) that adds free SearXNG search, stealth scraping, package/GitHub/changelog/API-docs lookups, and an optional residential proxy with per-country routing. The user deploys it from [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research); the server's token and secret live in its `.env` and `.token` files, written by the user, never in chat.
@@ -107,7 +113,7 @@ Tell the user:
 
 ---
 
-Plugin **learn-toolkit** (v2.3.0) installed. Here's what you have:
+Plugin **learn-toolkit** (v2.4.0) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|

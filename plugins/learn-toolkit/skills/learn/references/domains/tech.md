@@ -8,22 +8,29 @@ discussion rather than in a text tradition.
 
 ## Subagent Roster
 
-Four subagents, dispatched in one message:
+Fixed roles, dispatched every run in the same message as the web lanes:
 
-1. **docs** — Tavily, official documentation and specifications.
-2. **code** — Exa `web_search_exa` for code examples and `web_search_advanced_exa` with
-   `includeDomains: ["github.com"]` and a query describing the ideal repository or README.
-3. **community** — Tavily with `--include-domains reddit.com,news.ycombinator.com,stackoverflow.com
-   --time-range year`, plus Exa `web_search_advanced_exa` with `category: "personal site"` for
-   practitioner write-ups.
-4. **library** — Trove (formerly CandleKeep; see `../trove-integration.md`).
+1. **library** — Trove (formerly CandleKeep; see `../trove-integration.md`).
+2. **web** — the free open search on the self-hosted web-research server (SearXNG):
+   `batch_web_search` with categories `it` and `general` (one batch call), `batch_crawl_urls`
+   for the keepers, and the lookups `package_info`, `github_repo`, `api_docs`, `get_changelog`
+   (plus `compare_tech` when the subject names two or more technologies).
+   It always runs when `HAS_WEB_RESEARCH`, on every run, and does not count toward `$WEB_LANES`; see
+   `../web-research.md`.
 
-Optional extra roles, dispatched in the same message only when `HAS_WEB_RESEARCH`:
+Web lanes (default 2). Fill the lanes from the backends that are available, in the order below, one subagent per
+backend; take the first `$WEB_LANES` (see SKILL.md Phase 0.5). A query intent whose
+backend is not chosen moves to the first chosen lane, so a single lane still covers the
+first two intents in order.
 
-- **web** — web-research `batch_web_search` with categories `it` and `general` (one batch
-  call), plus `batch_crawl_urls` for the keepers; see `../web-research.md`.
-- **packages** — web-research `package_info`, `github_repo`, `api_docs`, `get_changelog`,
-  and `compare_tech` when the subject names two or more technologies.
+1. **tavily** — official documentation and specifications, then community discussion with
+   `--include-domains reddit.com,news.ycombinator.com,stackoverflow.com --time-range year`.
+2. **exa** — code examples with `web_search_exa`, `web_search_advanced_exa` with
+   `includeDomains: ["github.com"]` and a query describing the ideal repository or README,
+   and `category: "personal site"` for practitioner write-ups.
+3. **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
+   `firecrawl_scrape` for up to 3 of its own results, favouring JS-heavy pages and public
+   PDFs; see `../firecrawl.md`.
 
 ## Source Ranking
 
@@ -31,7 +38,8 @@ official docs > source code / repos > library (Trove) > practitioner discussion 
 
 ## Query Patterns
 
-Tavily — one focused query per subagent, recency via parameter, never via query text:
+Tavily — one focused query per assigned intent (docs, community, and any intent moved to
+this lane), recency via parameter, never via query text:
 
 `$OUT` is the subagent's own `mktemp -d` directory (see SKILL.md Phase 1); paste its
 literal path.

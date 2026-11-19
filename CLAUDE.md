@@ -130,6 +130,7 @@ Plugin **learn-toolkit** installed. Here's what you have:
 | Trove (optional) | Automatic library scan + end-of-run write offer, if `trove` CLI installed |
 | NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
 | Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`tvly init --agent claude-code`) |
+| Firecrawl (keyless) | Right away — free-tier search and scrape, no key |
 | web-research (optional, self-hosted) | Search, crawl and package tools, if `web_research_url` and token are set (Step 3c) |
 
 **After installation (keys optional):**
@@ -170,5 +171,5 @@ tvly crawl "https://docs.example.com" --output-dir ./docs/
 
 - **NEVER ask for, display, or log API key values.** Not in chat, not in tool calls, not in file contents.
 - If a user accidentally pastes a key, warn them to rotate it immediately
-- The plugin bundles MCP configs (tavily, exa, exa-agent, web-research) via `.mcp.json`; API keys come from the plugin's `userConfig` (system keychain) — no manual settings.json editing needed
+- The plugin bundles MCP configs (tavily, exa, exa-agent, firecrawl, web-research) via `.mcp.json`; Firecrawl runs keyless on its free tier; API keys come from the plugin's `userConfig` (system keychain) — no manual settings.json editing needed
 - If the user's Claude Code version doesn't support plugins (< 1.0.33), fall back to manual skill installation using the skill files in `plugins/learn-toolkit/skills/` (see Option B in README)

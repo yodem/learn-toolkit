@@ -931,8 +931,8 @@ if "[Web research ✓/✗]" not in text:
     print("SKILL.md matrix is missing [Web research ✓/✗]")
 if "HAS_WEB_RESEARCH" not in text:
     print("SKILL.md never sets HAS_WEB_RESEARCH")
-if "`HAS_TAVILY`, `HAS_EXA` and `HAS_WEB_RESEARCH` are all false" not in flat:
-    print("SKILL.md hard stop must name HAS_TAVILY, HAS_EXA and HAS_WEB_RESEARCH")
+if "`HAS_TAVILY`, `HAS_EXA`, `HAS_FIRECRAWL` and `HAS_WEB_RESEARCH` are all false" not in flat:
+    print("SKILL.md hard stop must name HAS_TAVILY, HAS_EXA, HAS_FIRECRAWL and HAS_WEB_RESEARCH")
 PYEOF
 }
 

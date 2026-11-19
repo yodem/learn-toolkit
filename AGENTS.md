@@ -9,6 +9,13 @@ Install guidance for end users lives in `CLAUDE.md` and `plugins/learn-toolkit/r
 - `python3 -m unittest discover -s maintainer/tests` — maintainer tests. CI (`.github/workflows/ci.yml`) runs them on every PR and push to `main`; the Claude Code Stop hook in `.claude/` runs them when the tree is dirty.
 - `claude plugin validate plugins/learn-toolkit` — manifest, hooks and MCP config.
 - `python3 maintainer/check-backends.py --offline` — static drift checks; drop `--offline` to compare against live Exa/Tavily.
+- Clean install into a throwaway config (call the binary, `whence -p claude`, if `claude` is a shell function). With no keys, Exa and Firecrawl connect, Tavily is rejected, Exa Agent needs auth and web-research is unset:
+
+  ```bash
+  T=$(mktemp -d); CLAUDE_CONFIG_DIR=$T claude plugin marketplace add "$PWD" && \
+  CLAUDE_CONFIG_DIR=$T claude plugin install learn-toolkit@learn-toolkit-marketplace && \
+  CLAUDE_CONFIG_DIR=$T claude mcp list 2>&1 | grep -E 'tavily|exa|firecrawl|web-research'
+  ```
 
 ## Rules
 
