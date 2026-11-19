@@ -24,6 +24,10 @@
       "headers": {
         "Authorization": "Bearer ${user_config.web_research_token}"
       }
+    },
+    "firecrawl": {
+      "type": "http",
+      "url": "https://mcp.firecrawl.dev/v2/mcp"
     }
   }
 }

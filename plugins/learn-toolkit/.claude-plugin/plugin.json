@@ -1,7 +1,7 @@
 {
   "name": "learn-toolkit",
-  "version": "2.3.0",
-  "description": "One skill, /learn <subject>, that researches a topic with domain-aware tool routing (tech, philosophy, judaism), fans research out across Tavily, Exa, Sefaria and Trove (plus an optional self-hosted web-research server), and optionally builds a NotebookLM learning package.",
+  "version": "2.4.0",
+  "description": "One skill, /learn <subject>, that researches a topic with domain-aware tool routing (tech, philosophy, judaism), fans research out across Tavily, Exa, keyless Firecrawl, Sefaria and Trove (plus an optional self-hosted web-research server), and optionally builds a NotebookLM learning package.",
   "author": {
     "name": "Yotam Fromm",
     "url": "https://github.com/yodem"
@@ -15,6 +15,7 @@
     "notebooklm",
     "tavily",
     "exa",
+    "firecrawl",
     "trove",
     "sefaria"
   ],

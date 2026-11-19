@@ -1,14 +1,14 @@
 ---
 name: learn
-description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, Sefaria and Trove (formerly CandleKeep), plus an optional self-hosted web-research server, with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
+description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, keyless Firecrawl, Sefaria and Trove (formerly CandleKeep), plus an optional self-hosted web-research server, with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
 allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
-  version: 2.3.0
-  mcp-server: tavily, exa, exa-agent, web-research, notebooklm-mcp
+  version: 2.4.0
+  mcp-server: tavily, exa, exa-agent, firecrawl, web-research, notebooklm-mcp
   category: learning
-  tags: [research, domains, tavily, exa, sefaria, trove, notebooklm]
+  tags: [research, domains, tavily, exa, firecrawl, sefaria, trove, notebooklm]
 ---
 
 # Learn Workflow
@@ -88,6 +88,9 @@ Run these `ToolSearch` calls in parallel:
 5. `ToolSearch(query="batch_crawl_urls stealth_scrape")` — the optional self-hosted
    web-research server; details in `${CLAUDE_SKILL_DIR}/references/web-research.md`. If it
    finds nothing, re-run this one query once after the other probes finish; never retry per subagent.
+6. `ToolSearch(query="+firecrawl firecrawl_search")` — the keyless (free tier) Firecrawl
+   server; match tools ending in `__firecrawl_search`, `__firecrawl_scrape` and
+   `__firecrawl_parse`. Details in `${CLAUDE_SKILL_DIR}/references/firecrawl.md`.
 
 Also note whether the `Artifact` tool is in your tool list (it is a built-in Claude Code
 tool, not an MCP server, so no `ToolSearch` is needed).
@@ -103,6 +106,7 @@ Set:
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
 - `HAS_WEB_RESEARCH` = true if a tool ending in `__batch_crawl_urls` exists on a server whose name contains `web-research`.
+- `HAS_FIRECRAWL` = true if a tool ending in `__firecrawl_search` was found.
 
 If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
 `HAS_TAVILY_MCP=false` and continue with the `tvly` CLI if available. Keyless CLI search
@@ -126,13 +130,13 @@ Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exi
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl ✓/✗]
 ```
 
 When `[Web research ✗]` and `/mcp` shows `INVALID_CONFIG`, the URL is blank: that's expected if you don't self-host, so add nothing. Otherwise add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
 token is wrong; re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace`".
 
-**The only hard stop in the workflow:** if `HAS_TAVILY`, `HAS_EXA` and `HAS_WEB_RESEARCH` are all false,
+**The only hard stop in the workflow:** if `HAS_TAVILY`, `HAS_EXA`, `HAS_FIRECRAWL` and `HAS_WEB_RESEARCH` are all false,
 halt before Phase 0.5 (see the Error Recovery table below for the exact directive). Show
 setup instructions for every missing backend and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
 after fixing the above." Do not fall back to bare `WebSearch`.
@@ -151,6 +155,10 @@ If Tavily is missing:
 > `plugin:learn-toolkit:exa`. To raise rate limits and enable `--deep`, run
 > `/plugin configure learn-toolkit@learn-toolkit-marketplace` and enter your Exa key,
 > then `/reload-plugins` or restart.
+
+> **Firecrawl is not connected.** It runs on Firecrawl's keyless free tier; if it is
+> missing, run `/mcp` and reconnect `plugin:learn-toolkit:firecrawl`. Calls from a VPN
+> or proxy may be refused.
 
 Every other backend degrades instead of stopping:
 - `HAS_SEFARIA = false` — only matters if the resolved domain is `judaism`; note it in
@@ -266,6 +274,11 @@ accumulating every subagent's raw exploration.
   or a rate-limit error was seen in Phase 1 (on re-dispatch), each subagent gets at most 2
   Exa searches plus 3 fetches, prefers web-research `batch_web_search` when `HAS_WEB_RESEARCH`,
   and says so in its digest.
+- Firecrawl subagents (only when `HAS_FIRECRAWL`) follow
+  `${CLAUDE_SKILL_DIR}/references/firecrawl.md`: keyless free tier, so at most 2
+  `firecrawl_search` calls and 3 `firecrawl_scrape` calls per subagent, markdown only,
+  main content only; digests only. On a keyless limit or refusal (`KEYLESS_*`, 403,
+  429, "daily limit") stop calling Firecrawl and return what you have.
 - web-research subagents (only when `HAS_WEB_RESEARCH`) follow
   `${CLAUDE_SKILL_DIR}/references/web-research.md`: one batch call per lane, digests only.
 - Sefaria subagents (domain `judaism` only) resolve the topic to a citation first, then
@@ -597,12 +610,14 @@ indefinitely or produces a false stale-state warning.
 
 | Error | Cause | Action |
 |-------|-------|--------|
-| Tavily, Exa and web-research all unavailable | No Tavily MCP or CLI, no Exa, no web-research server | **STOP workflow.** Show setup instructions for each missing backend. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
+| Tavily, Exa, Firecrawl and web-research all unavailable | No Tavily MCP or CLI, no Exa, no Firecrawl, no web-research server | **STOP workflow.** Show setup instructions for each missing backend. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
 | Tavily CLI auth fails (`tvly auth`) | Not logged in | Set `HAS_TAVILY_CLI_AUTH=false`; keep `HAS_TAVILY_SKILLS=true` for search and extract, and ask the user to run `tvly login` for full CLI access |
 | Tavily MCP returns `Invalid Tavily API key` | Tavily key is blank or invalid | Set `HAS_TAVILY_MCP=false`; use `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | web-research `failed` with `AUTH_HEADER_REJECTED` (401) | Token is wrong or blank | `HAS_WEB_RESEARCH=false`; continue on Tavily/Exa; tell the user to re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | web-research unreachable | Tailnet down or server stopped | `HAS_WEB_RESEARCH=false`; continue on the other backends |
 | web-research returns zero results | Search engines blocked or empty | Treat as a failed lane; lean on Tavily and Exa |
+| Firecrawl keyless call refused (`KEYLESS_*`, 403 or 429, "daily limit") | Free-tier rate limit, or a VPN/proxy network it does not accept | Drop the Firecrawl lane for this run; continue on the other backends. Mention it once in the final report |
+| Firecrawl MCP not found | Not connected | `/mcp` reconnect `plugin:learn-toolkit:firecrawl`; no key needed. Continue on the other backends |
 | Exa MCP not found | Not connected | `/mcp` reconnect; key optional. Proceed on Tavily alone if available |
 | Tavily MCP fails at connect with HTTP 401 `AUTH_HEADER_REJECTED` ("Server rejected the configured Authorization header") | `tavily_api_key` stale, or blank (Tavily then asks for OAuth, which the plugin cannot complete) | `HAS_TAVILY_MCP=false`; continue on the `tvly` CLI; tell the user to re-enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | Exa rate-limit or HTTP 429 error | Keyless Exa throttled by the parallel fan-out | After the fan-out, re-dispatch the starved subagent once, serially, under the keyless Exa budget; tell the user to add an Exa key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |

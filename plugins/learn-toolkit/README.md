@@ -1,7 +1,7 @@
 # learn-toolkit
 
 A single Claude Code skill, `/learn-toolkit:learn`, for deep-diving into a subject.
-It fans research out across Tavily, Exa, Sefaria, and Trove (formerly CandleKeep) with domain-aware
+It fans research out across Tavily, Exa, keyless Firecrawl, Sefaria, and Trove (formerly CandleKeep) with domain-aware
 routing, synthesizes the findings, saves them locally, and optionally builds a
 NotebookLM learning package (podcast, infographic, mind map, flashcards, study guide)
 and offers to file the session into a Trove field-research book.
@@ -21,7 +21,7 @@ Installation prompts for both optional keys and stores them in the system keycha
 
 For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`. Never paste keys in chat.
 
-The workflow needs **at least one** of Tavily or Exa to run at all; everything else
+The workflow needs **at least one** of Tavily, Exa or Firecrawl to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
 [Backends](#backends) below.
 
@@ -88,6 +88,7 @@ resolved domain's file in full before dispatching any research.
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
 | Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the Trove offer are unaffected |
+| Firecrawl | Optional, keyless free tier | `firecrawl_search`, plus `firecrawl_scrape` for JS-heavy pages and public PDFs the other lanes return thin; no key or account | Rate-limited and refused on some VPNs/proxies: the lane drops out and the run continues |
 | web-research | Optional, self-hosted | Free SearXNG search, batch search and crawl, stealth scraping, package/GitHub/changelog/API-docs lookups | Only the web-research server shows as failed; every other backend works unchanged |
 
 ### NotebookLM is optional
@@ -101,7 +102,7 @@ workflow prints exactly one notice:
 
 The notebook/artifact tables are simply omitted from the final report; the workflow
 never stops because of this. The **only** hard stop in the entire workflow is having
-zero available search backends (both Tavily and Exa missing).
+zero available search backends (Tavily, Exa, Firecrawl and web-research all missing).
 
 ### Exa tools
 
@@ -175,6 +176,10 @@ Install [notebooklm-mcp-cli](https://github.com/jacob-bd/gemini-notebook-mcp-cli
 nlm login
 ```
 
+### Firecrawl (keyless free tier)
+
+The bundled `firecrawl` server points at `https://mcp.firecrawl.dev/v2/mcp` with no key: search, scrape and parse work on Firecrawl's free tier, with a per-network rate limit. `/learn` caps each Firecrawl subagent at 2 searches and 3 scrapes and drops the lane when a call is refused. Crawl, map, extract and the agent endpoints need an account and are not used.
+
 ### web-research (optional, self-hosted)
 
 A self-hosted server ([elad12390/web-research-assistant](https://github.com/elad12390/web-research-assistant) plus SearXNG, 16 tools) that adds free, unlimited SearXNG search, stealth scraping, an optional residential proxy (`PROXY_URL`, e.g. Evomi, where the `country` argument routes a request through that country), and package, GitHub, changelog and API-docs lookups. Deployment steps are in [`infra/web-research`](https://github.com/yodem/learn-toolkit/tree/main/infra/web-research).
@@ -245,8 +250,8 @@ hit.
 ```
 learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
-│   └── plugin.json                            # Plugin manifest (name, version 2.3.0)
-├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent, web-research); keys from userConfig
+│   └── plugin.json                            # Plugin manifest (name, version 2.4.0)
+├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent, firecrawl, web-research); keys from userConfig
 ├── hooks/
 │   ├── hooks.json
 │   ├── validate-output.sh
@@ -268,6 +273,7 @@ learn-toolkit/                                 # Plugin root (plugins/learn-tool
             ├── notebooklm-loading.md           # Notebook overflow logic
             ├── artifact-generation.md          # NotebookLM tool signatures
             ├── trove-integration.md            # Trove read/write reference
+            ├── firecrawl.md                    # keyless Firecrawl tool reference
             └── web-research.md                 # web-research tool reference
 ```
 

@@ -25,6 +25,12 @@ Optional extra roles, dispatched in the same message only when `HAS_WEB_RESEARCH
 - **packages** — web-research `package_info`, `github_repo`, `api_docs`, `get_changelog`,
   and `compare_tech` when the subject names two or more technologies.
 
+Optional extra role, dispatched in the same message only when `HAS_FIRECRAWL`:
+
+- **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
+  `firecrawl_scrape` for up to 3 keepers the other lanes returned thin, JS-rendered or as
+  PDFs; see `../firecrawl.md`. It adds to the other roles and never replaces them.
+
 ## Source Ranking
 
 official docs > source code / repos > library (Trove) > practitioner discussion > tutorials > blog posts

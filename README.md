@@ -3,7 +3,7 @@
 A Claude Code plugin marketplace with one plugin: **learn-toolkit**, a single skill,
 `/learn-toolkit:learn <subject>`, for deep-diving into a technology, a philosophical
 concept, or a Jewish text with domain-aware research routing across Tavily, Exa,
-Sefaria, and Trove (formerly CandleKeep), and an optional NotebookLM learning package.
+keyless Firecrawl, Sefaria, and Trove (formerly CandleKeep), and an optional NotebookLM learning package.
 
 ```
 /learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]
@@ -64,9 +64,9 @@ learn-toolkit/                                  # Repository root — marketplac
 ├── maintainer/                                 # Backend drift checker + tests (not shipped)
 ├── infra/web-research/                         # Optional self-hosted web-research server
 ├── docs/superpowers/                           # Design specs and plans
-└── plugins/learn-toolkit/                      # The installable plugin (v2.3.0)
+└── plugins/learn-toolkit/                      # The installable plugin (v2.4.0)
     ├── .claude-plugin/plugin.json               # Plugin manifest
-    ├── .mcp.json                                # MCP servers (tavily, exa, exa-agent, web-research); keys from userConfig
+    ├── .mcp.json                                # MCP servers (tavily, exa, exa-agent, firecrawl, web-research); keys from userConfig
     ├── hooks/                                   # Output/artifact validation hooks
     ├── scripts/lint-skill.sh                    # Skill lint (13 checks); run before committing
     ├── references/setup-guide.md                # AI-assistant install walkthrough

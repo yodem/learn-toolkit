@@ -24,6 +24,12 @@ Optional extra role, dispatched in the same message only when `HAS_WEB_RESEARCH`
 - **web** — web-research `batch_web_search` (one batch call), plus `batch_crawl_urls` for
   the keepers; see `../web-research.md`. It adds to the other roles and never replaces them.
 
+Optional extra role, dispatched in the same message only when `HAS_FIRECRAWL`:
+
+- **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
+  `firecrawl_scrape` for up to 3 keepers the other lanes returned thin, JS-rendered or as
+  PDFs; see `../firecrawl.md`. Secondary only, like `secondary`: never in place of Sefaria.
+
 ## Source Ranking
 
 primary text (Sefaria) > classical commentators > library (Trove) > academic scholarship > shiurim and popular writing
