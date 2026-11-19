@@ -141,6 +141,12 @@ halt before Phase 0.5 (see the Error Recovery table below for the exact directiv
 setup instructions for every missing backend and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
 after fixing the above." Do not fall back to bare `WebSearch`.
 
+**No Tavily and no Exa:** when `HAS_TAVILY` and `HAS_EXA` are both false but Firecrawl or
+web-research is available, the roster's Tavily/Exa roles keep their role and query intent
+but run on those backends instead (Firecrawl first, then web-research), each under its own
+budget; skip a role neither backend can serve. If every remaining search lane is then
+refused in Phase 1, stop with the same setup instructions instead of re-dispatching.
+
 If Tavily is missing:
 > **Tavily is not connected.**
 > **Option A — CLI:** `curl -fsSL https://cli.tavily.com/install.sh | bash`, then
