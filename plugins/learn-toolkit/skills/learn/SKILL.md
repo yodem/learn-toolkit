@@ -158,8 +158,9 @@ toward `$WEB_LANES`. When it is false, print the `[Web research ✗]` note below
 user sees that the run lost its free lane, then continue.
 
 When `HAS_TAVILY` and `HAS_EXA` are both false, the web lanes come from Firecrawl alone (see
-Phase 0.5); if every search lane is refused in Phase 1, stop with the setup instructions
-above instead of re-dispatching.
+Phase 0.5) plus web-research. Stop with the setup instructions above only when every
+search lane, the web-research `web` role included, returned nothing in Phase 1; a run with
+web-research sources continues.
 
 If Tavily is missing:
 > **Tavily is not connected.**
