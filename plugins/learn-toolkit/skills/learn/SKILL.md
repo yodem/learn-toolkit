@@ -144,7 +144,10 @@ after fixing the above." Do not fall back to bare `WebSearch`.
 **No Tavily and no Exa:** when `HAS_TAVILY` and `HAS_EXA` are both false but Firecrawl or
 web-research is available, the roster's Tavily/Exa roles keep their role and query intent
 but run on those backends instead (Firecrawl first, then web-research), each under its own
-budget; skip a role neither backend can serve. If every remaining search lane is then
+budget; skip a role neither backend can serve. Build this adapted roster before Phase 1:
+in each substituted role's prompt, replace the Tavily/Exa tools with the full discovered
+Firecrawl or web-research tool names, state that backend's budget, and say that the
+substitution overrides the domain file's "never replaces" note for this run. If every remaining search lane is then
 refused in Phase 1, stop with the same setup instructions instead of re-dispatching.
 
 If Tavily is missing:

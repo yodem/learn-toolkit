@@ -2,7 +2,8 @@
 
 `firecrawl` is Firecrawl's hosted MCP server at `https://mcp.firecrawl.dev/v2/mcp`, used on
 its **keyless free tier**: no account, no API key, nothing in `userConfig`. It is
-**additive**: it never replaces a Tavily, Exa, Sefaria, Trove or NotebookLM lane, and its
+**additive**: it never replaces a Tavily, Exa, Sefaria, Trove or NotebookLM lane (the one
+exception is a run with no Tavily and no Exa; see SKILL.md Phase 0), and its
 digests flow through the same Phase 2 merge. Its strength is clean markdown from pages and
 documents that other backends return thin or broken: JavaScript-heavy sites and public
 PDF/DOCX URLs.
