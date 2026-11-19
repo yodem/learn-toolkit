@@ -266,6 +266,9 @@ this is a real fan-out, not a sequence). A query intent of a backend that is not
 3. That backend's `## Query Patterns` from the same domain file — the exact query
    shapes, flags, and (for Exa) the "describe the ideal page" framing.
 4. The return contract below, reproduced in the subagent's prompt.
+5. For a web lane: any query intents moved to it from a backend not in `$LANES`, spelled
+   out with their query patterns. For the Firecrawl lane: `HAS_FIRECRAWL_MCP`,
+   `HAS_FIRECRAWL_CLI` and the discovered tool names, so it can pick its route.
 
 **Return contract — every subagent returns digests, never raw pages, targeting roughly
 1,000-2,000 tokens of distilled findings total (a target to aim for, not a hard count to
@@ -338,7 +341,8 @@ nothing; if only the web side came back empty, continue on the primary and libra
 sources with a one-line degraded-web notice.
 
 1. A web lane that failed or came back empty is replaced by the next available backend
-   not in `$LANES` (domain order), which takes over that lane's query intents.
+   not in `$LANES` (domain order): update `$LANES` to swap it in first, then dispatch it
+   with that lane's query intents and the handoff items above.
 2. Otherwise (no lane failed, or no spare backend), re-dispatch the weakest subagent once
    with a broadened query.
    A lane whose backend was refused (for Firecrawl: both MCP and CLI routes) is never
