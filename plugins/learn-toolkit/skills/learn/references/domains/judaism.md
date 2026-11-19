@@ -8,7 +8,7 @@ philosophical.
 
 ## Subagent Roster
 
-Three subagents, dispatched in one message:
+Fixed roles, dispatched every run in the same message as the web lanes:
 
 1. **primary** — Sefaria MCP. This is the authoritative source for this domain and always
    runs first: `mcp__claude_ai_Sefaria__text_search`,
@@ -16,19 +16,22 @@ Three subagents, dispatched in one message:
    `mcp__claude_ai_Sefaria__get_topic_details`,
    `mcp__claude_ai_Sefaria__get_links_between_texts` for commentary chains.
 2. **library** — Trove (formerly CandleKeep) Judaica books (see `../trove-integration.md`).
-3. **secondary** — Tavily and Exa, **secondary only**: scholarship and shiurim that
-   contextualise the primary text. Never used in place of Sefaria.
+3. **web** — the free open search on the self-hosted web-research server (SearXNG):
+   `batch_web_search` (one batch call), plus `batch_crawl_urls` for the keepers.
+   It always runs when `HAS_WEB_RESEARCH`, on every run, and does not count toward `$WEB_LANES`; see
+   `../web-research.md`.
 
-Optional extra role, dispatched in the same message only when `HAS_WEB_RESEARCH`:
+Web lanes (default 2), **secondary only**: scholarship and shiurim that contextualise the
+primary text, never used in place of Sefaria. Fill the lanes from the backends that are available, in the order below, one subagent per
+backend; take the first `$WEB_LANES` (see SKILL.md Phase 0.5). A query intent whose
+backend is not chosen moves to the first chosen lane, so a single lane still covers the
+first two intents in order.
 
-- **web** — web-research `batch_web_search` (one batch call), plus `batch_crawl_urls` for
-  the keepers; see `../web-research.md`. It adds to the other roles and never replaces them.
-
-Optional extra role, dispatched in the same message only when `HAS_FIRECRAWL`:
-
-- **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
-  `firecrawl_scrape` for up to 3 of its own results, favouring JS-heavy pages and public
-  PDFs; see `../firecrawl.md`. Secondary only, like `secondary`: never in place of Sefaria.
+1. **exa** — `web_search_advanced_exa` with `category: "publication"` for academic articles.
+2. **tavily** — shiurim, encyclopedic entries and community scholarship.
+3. **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
+   `firecrawl_scrape` for up to 3 of its own results, favouring JS-heavy pages and public
+   PDFs; see `../firecrawl.md`.
 
 ## Source Ranking
 

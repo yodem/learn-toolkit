@@ -8,26 +8,28 @@ literature rather than in documentation or in a religious text tradition.
 
 ## Subagent Roster
 
-Three subagents, dispatched in one message:
+Fixed roles, dispatched every run in the same message as the web lanes:
 
-1. **literature** — Exa `web_search_advanced_exa` with `category: "publication"` for papers,
+1. **library** — Trove (formerly CandleKeep), prioritising per-author humanities books
+   (see `../trove-integration.md`).
+2. **web** — the free open search on the self-hosted web-research server (SearXNG):
+   `batch_web_search` (one batch call), plus `batch_crawl_urls` for the keepers.
+   It always runs when `HAS_WEB_RESEARCH`, on every run, and does not count toward `$WEB_LANES`; see
+   `../web-research.md`.
+
+Web lanes (default 2). Fill the lanes from the backends that are available, in the order below, one subagent per
+backend; take the first `$WEB_LANES` (see SKILL.md Phase 0.5). A query intent whose
+backend is not chosen moves to the first chosen lane, so a single lane still covers the
+first two intents in order.
+
+1. **exa** — literature: `web_search_advanced_exa` with `category: "publication"` for papers,
    plus `category: "personal site"` for essays. Exa's personal-site index is its documented
    strength; use it rather than domain-filtered Tavily here.
-2. **overview** — Tavily general search for encyclopedic and orienting material
-   (SEP, IEP, university course pages).
-3. **library** — Trove (formerly CandleKeep), prioritising per-author humanities books
-   (see `../trove-integration.md`).
-
-Optional extra role, dispatched in the same message only when `HAS_WEB_RESEARCH`:
-
-- **web** — web-research `batch_web_search` (one batch call), plus `batch_crawl_urls` for
-  the keepers; see `../web-research.md`. It adds to the other roles and never replaces them.
-
-Optional extra role, dispatched in the same message only when `HAS_FIRECRAWL`:
-
-- **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
-  `firecrawl_scrape` for up to 3 of its own results, favouring JS-heavy pages and public
-  PDFs; see `../firecrawl.md`. It adds to the other roles and never replaces them.
+2. **tavily** — overview: encyclopedic and orienting material (SEP, IEP, university course
+   pages).
+3. **firecrawl** — keyless Firecrawl `firecrawl_search` (at most 2 queries) plus
+   `firecrawl_scrape` for up to 3 of its own results, favouring JS-heavy pages and public
+   PDFs; see `../firecrawl.md`.
 
 ## Source Ranking
 

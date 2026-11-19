@@ -1,8 +1,8 @@
 ---
 name: learn
-description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, keyless Firecrawl, Sefaria and Trove (formerly CandleKeep), plus an optional self-hosted web-research server, with one subagent per backend, then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
+description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, keyless Firecrawl, Sefaria and Trove (formerly CandleKeep), plus the self-hosted open-search (web-research) server on every run, with two web-search subagents by default (one for a simple subject, three for a complex one), then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
 argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
-allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
+allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(firecrawl *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
   version: 2.4.0
@@ -66,6 +66,16 @@ Search and extract work from 0.1.6, so set `HAS_TAVILY_SKILLS=true` whenever `tv
 upgrade worked. Set `HAS_TAVILY_RESEARCH_CLI=true` only at 0.1.8 or newer, because `--deep` needs `research run
 --citation-format --no-wait`. Set `HAS_TAVILY_CLI_AUTH=true` only when `tvly auth` passes; otherwise set it false.
 
+#### Step 0a-2: Firecrawl CLI
+
+```bash
+firecrawl --status 2>/dev/null
+```
+
+Set `HAS_FIRECRAWL_CLI=true` when the output contains `Authenticated` (a signed-in free
+account); otherwise, or when the command is missing, set it false. Never run
+`firecrawl login` yourself.
+
 #### Step 0b: MCP backends
 
 Run these `ToolSearch` calls in parallel:
@@ -106,7 +116,8 @@ Set:
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
 - `HAS_WEB_RESEARCH` = true if a tool ending in `__batch_crawl_urls` exists on a server whose name contains `web-research`.
-- `HAS_FIRECRAWL` = true if a tool ending in `__firecrawl_search` was found.
+- `HAS_FIRECRAWL_MCP` = true if a tool ending in `__firecrawl_search` was found.
+- `HAS_FIRECRAWL` = true if `HAS_FIRECRAWL_MCP` OR `HAS_FIRECRAWL_CLI`.
 
 If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
 `HAS_TAVILY_MCP=false` and continue with the `tvly` CLI if available. Keyless CLI search
@@ -130,7 +141,7 @@ Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exi
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl MCP ✓/✗] [Firecrawl CLI ✓/✗]
 ```
 
 When `[Web research ✗]` and `/mcp` shows `INVALID_CONFIG`, the URL is blank: that's expected if you don't self-host, so add nothing. Otherwise add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
@@ -141,14 +152,14 @@ halt before Phase 0.5 (see the Error Recovery table below for the exact directiv
 setup instructions for every missing backend and end with "Run `/learn-toolkit:learn $ARGUMENTS` again
 after fixing the above." Do not fall back to bare `WebSearch`.
 
-**No Tavily and no Exa:** when `HAS_TAVILY` and `HAS_EXA` are both false but Firecrawl or
-web-research is available, the roster's Tavily/Exa roles keep their role and query intent
-but run on those backends instead (Firecrawl first, then web-research), each under its own
-budget; skip a role neither backend can serve. Build this adapted roster before Phase 1:
-in each substituted role's prompt, replace the Tavily/Exa tools with the full discovered
-Firecrawl or web-research tool names, state that backend's budget, and say that the
-substitution overrides the domain file's "never replaces" note for this run. If every remaining search lane is then
-refused in Phase 1, stop with the same setup instructions instead of re-dispatching.
+**web-research runs on every run.** It is the free open search (SearXNG) on the user's own
+server, so its `web` role is dispatched whenever `HAS_WEB_RESEARCH` is true and never counts
+toward `$WEB_LANES`. When it is false, print the `[Web research ✗]` note below in bold so the
+user sees that the run lost its free lane, then continue.
+
+When `HAS_TAVILY` and `HAS_EXA` are both false, the web lanes come from Firecrawl alone (see
+Phase 0.5); if every search lane is refused in Phase 1, stop with the setup instructions
+above instead of re-dispatching.
 
 If Tavily is missing:
 > **Tavily is not connected.**
@@ -168,11 +179,12 @@ If Tavily is missing:
 > **Firecrawl is not connected.** It runs on Firecrawl's keyless free tier; if it is
 > missing, run `/mcp` and reconnect `plugin:learn-toolkit:firecrawl`. Calls from a VPN
 > or proxy may be refused.
+> For the signed-in free-account fallback: `npx -y firecrawl-cli@latest init --all --browser`
+> and sign in on the website.
 
 Every other backend degrades instead of stopping:
 - `HAS_SEFARIA = false` — only matters if the resolved domain is `judaism`; note it in
-  the domain announcement and let the `judaism` roster's `secondary` subagent (Tavily/Exa)
-  carry more weight.
+  the domain announcement and let the web lanes carry more weight.
 - `HAS_TROVE = false` — the library subagent and Phase 7 offer are skipped silently.
 - `HAS_NOTEBOOKLM = false` — see Phase 3-5.
 - `HAS_ARTIFACT = false` — the Phase 6b learning page is still written locally, just not
@@ -214,21 +226,39 @@ Read `${CLAUDE_SKILL_DIR}/references/domains/$DOMAIN.md` in full before doing an
 else — it defines the Phase 1 roster, Source Ranking, Query Patterns, and Output
 Settings used by every later phase.
 
+**Size the web lanes.** The web lanes are the Tavily, Exa and Firecrawl subagents; Trove,
+Sefaria and web-research are fixed roles and never count. Set `$WEB_LANES`:
+
+- **2 by default.**
+- **1** when the subject is simple: one narrow, well-defined term, tool, option or text
+  with settled sources (e.g. "Python walrus operator", "what is a CRDT").
+- **3** when the subject is complex: it compares two or more technologies or positions,
+  spans several subsystems or schools, is an open debate, or `--deep` is set.
+
+Never more than 3. Pick the lanes from the domain file's web-lane order, skipping
+backends that are unavailable (`HAS_TAVILY`, `HAS_EXA`, `HAS_FIRECRAWL`); with fewer
+available backends than `$WEB_LANES`, run the ones there are. Set `$LANES` to the chosen
+backends.
+
 **Announce before spending any research call:**
 
 ```
 Domain: <name> (inferred|--domain) — <primary sources for this domain, one clause>. Override with --domain.
+Web lanes: <n> (<default|simple|complex>: <one-clause reason>) — <backends in $LANES>, plus web-research.
 ```
 
 Example: `Domain: tech (inferred) — official docs, source repos, practitioner discussion. Override with --domain.`
+followed by `Web lanes: 2 (default) — tavily, exa, plus web-research.`
 
-**Verification gate:** domain announced, resolved language known, domain file read.
+**Verification gate:** domain announced, lane count and backends announced, resolved
+language known, domain file read.
 
 ### Phase 1: Parallel Research Fan-Out
 
-Dispatch every subagent in the resolved domain's `## Subagent Roster` **in a single
-message** (one `Task` call per roster entry, all in the same turn — this is a real
-fan-out, not a sequence). For each subagent, hand it:
+Dispatch the domain's fixed roles whose backend is available plus one subagent per
+backend in `$LANES` **in a single message** (one `Task` call each, all in the same turn —
+this is a real fan-out, not a sequence). A query intent of a backend that is not in
+`$LANES` moves to the first lane, as the domain file says. For each subagent, hand it:
 
 1. The subject (`$SUBJECT`, derived in Phase 0.5).
 2. Its roster entry — role name and which backend/tools it owns, verbatim from the
@@ -283,8 +313,9 @@ accumulating every subagent's raw exploration.
   or a rate-limit error was seen in Phase 1 (on re-dispatch), each subagent gets at most 2
   Exa searches plus 3 fetches, prefers web-research `batch_web_search` when `HAS_WEB_RESEARCH`,
   and says so in its digest.
-- Firecrawl subagents (only when `HAS_FIRECRAWL`) follow
-  `${CLAUDE_SKILL_DIR}/references/firecrawl.md`: keyless free tier, so at most 2
+- Firecrawl subagents (only when `firecrawl` is in `$LANES`) follow
+  `${CLAUDE_SKILL_DIR}/references/firecrawl.md`: MCP on the keyless free tier, or the
+  signed-in CLI when the MCP is missing or refused; either way at most 2
   `firecrawl_search` calls and 3 `firecrawl_scrape` calls (on its own search results) per subagent, markdown only,
   main content only; digests only. On a keyless limit or refusal (`KEYLESS_*`, 403,
   429, "daily limit") stop calling Firecrawl and return what you have.
@@ -301,7 +332,8 @@ accumulating every subagent's raw exploration.
 combined the roster produced at least 5 unique URLs/sources. If fewer, re-dispatch the
 weakest subagent with a broadened query before proceeding. A Firecrawl subagent that hit a
 keyless refusal is exempt from this gate and is never re-dispatched in the same run; pick
-the weakest of the other subagents instead.
+the weakest of the other subagents instead. Report the fan-out as `k of N subagents returned`
+in the final report, naming any lane that was refused or empty.
 
 ### Deep research (only with --deep)
 
@@ -556,8 +588,9 @@ indefinitely or produces a false stale-state warning.
 2. Phase 0.5: no `--domain` given → inferred `tech` (documentation/framework subject).
    Announces `Domain: tech (inferred) — official docs, source repos, practitioner
    discussion. Override with --domain.` Language resolves to `en`.
-3. Phase 1: dispatches `docs`, `code`, `community`, `library` subagents from
-   `domains/tech.md` in one message.
+3. Phase 0.5 also announces `Web lanes: 2 (default) — tavily, exa, plus web-research.`
+   Phase 1 dispatches `tavily`, `exa`, `library` and `web` from `domains/tech.md` in one
+   message.
 4. Phase 2: merges digests, ranks official docs > repos > library > discussion, writes
    the synthesis (Basics: what a router is and why the App Router replaced pages;
    Advanced: server components, caching, pitfalls; Related research), saves state file
@@ -578,9 +611,10 @@ indefinitely or produces a false stale-state warning.
    `he` (domain default, no `--language` override). Announces
    `Domain: judaism (--domain) — Sefaria primary text, classical commentators,
    library. Override with --domain.`
-3. Phase 1: dispatches `primary` (Sefaria), `library` (Trove), `secondary`
-   (Tavily/Exa) — Sefaria resolves the citation first before the secondary subagent
-   runs its contextualizing search.
+3. Phase 0.5 sizes it simple (one well-defined halakhic topic): `Web lanes: 1 (simple)
+   — exa, plus web-research.` Phase 1 dispatches `primary` (Sefaria), `library` (Trove),
+   `web` and the one `exa` lane — Sefaria resolves the citation first before the
+   secondary lanes run their contextualizing search.
 4. Phase 2: ranks primary text > commentators > library > academic scholarship >
    shiurim; synthesis in Hebrew framing.
 5. Phase 2.5: local files saved; `01-primary.md` holds the Sefaria text and commentary
@@ -602,9 +636,9 @@ indefinitely or produces a false stale-state warning.
    backends stops it.
 2. Phase 0.5: inferred `philosophy` (argument/thinker subject, no primary Jewish text).
    Language resolves to `he`.
-3. Phase 1: dispatches `literature` (Exa only, Tavily-dependent query patterns skipped),
-   `overview` (degrades — notes Tavily unavailable, relies on Exa for encyclopedic
-   framing too), `library` (Trove).
+3. Phase 0.5: two lanes by default; Tavily is missing, so `$LANES` is `exa, firecrawl`.
+   The Tavily overview intent (SEP, IEP) moves to the `exa` lane. Phase 1 dispatches
+   `exa`, `firecrawl`, `library` (Trove) and `web`.
 4. Phase 2 onward proceeds normally; Phase 6b's learning page opens with the puzzle and
    its terms (identity, persistence), then the positions and objections, then the
    literature.
@@ -635,7 +669,7 @@ indefinitely or produces a false stale-state warning.
 | `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
 | `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |
 | tvly exits 3 | Authentication required | Set HAS_TAVILY_CLI_AUTH=false, continue with search and extract only, and tell the user to run tvly login themselves |
-| Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; `secondary` subagent (Tavily/Exa) carries more weight; continue |
+| Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; the web lanes carry more weight; continue |
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
 | NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |

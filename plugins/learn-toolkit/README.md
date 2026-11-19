@@ -49,12 +49,16 @@ resolved domain's file in full before dispatching any research.
 
 ## What a run does
 
-1. **Phase 0 — Discover tools.** Checks Tavily (CLI and MCP), Exa MCP, Sefaria MCP,
-   Trove CLI, and NotebookLM MCP. Reports a matrix of what's available.
-2. **Phase 0.5 — Resolve domain and language,** read the domain file, announce the
-   routing before spending any research call.
-3. **Phase 1 — Parallel research fan-out.** One subagent per roster entry in the
-   resolved domain, dispatched in a single message — including a `library` subagent that
+1. **Phase 0 — Discover tools.** Checks Tavily (CLI and MCP), Exa MCP, Firecrawl (MCP and
+   CLI), web-research, Sefaria MCP, Trove CLI, and NotebookLM MCP. Reports a matrix of
+   what's available.
+2. **Phase 0.5 — Resolve domain and language, and size the web lanes,** read the domain
+   file, announce the routing before spending any research call. Tavily, Exa and Firecrawl
+   are the web lanes: **2 by default**, 1 for a simple subject, 3 for a complex one (a
+   comparison, an open debate, several subsystems, or `--deep`).
+3. **Phase 1 — Parallel research fan-out.** The chosen web lanes plus the fixed roles,
+   dispatched in a single message: the `web` subagent on the self-hosted open search
+   (SearXNG) runs on every run when it is connected, and a `library` subagent
    scans Trove (see [Trove](#trove) below) unconditionally on every
    domain. Each subagent returns digests (URL/id, title, kind, why it matters, key
    claims) — never raw page dumps.
@@ -85,11 +89,11 @@ resolved domain's file in full before dispatching any research.
 | Tavily | One search backend required | General web search, official docs, community discussion | If Exa, Firecrawl and web-research are also missing, the workflow **stops** before Phase 0.5 with setup instructions — the only hard stop in the whole workflow |
 | Exa | One search backend required | `web_search_exa`, `web_fetch_exa`, and targeted `web_search_advanced_exa` | Same as above |
 | Exa Agent | Optional; key required | Opt-in `agent_run` research with `--deep` | Use Tavily research or skip deep results |
-| Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
+| Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The web lanes carry more weight; noted in the domain announcement |
 | Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
 | NotebookLM | Optional | Podcast, infographic, mind map, flashcards, study guide | Phases 3-5 skip **as one unit** with a single notice — research, local files, and the Trove offer are unaffected |
-| Firecrawl | Optional, keyless free tier | `firecrawl_search`, plus `firecrawl_scrape` on its own results, favouring JS-heavy pages and public PDFs; no key or account | Rate-limited and refused on some VPNs/proxies: the lane drops out and the run continues |
-| web-research | Optional, self-hosted | Free SearXNG search, batch search and crawl, stealth scraping, package/GitHub/changelog/API-docs lookups | Only the web-research server shows as failed; every other backend works unchanged |
+| Firecrawl | Optional, free tier | `firecrawl_search`, plus `firecrawl_scrape` on its own results, favouring JS-heavy pages and public PDFs; keyless MCP, or the signed-in CLI as fallback | Rate-limited and refused on some VPNs/proxies: the lane drops out and the run continues |
+| web-research | Optional, self-hosted; runs on every run when connected | Free SearXNG search, batch search and crawl, stealth scraping, package/GitHub/changelog/API-docs lookups | Only the web-research server shows as failed; every other backend works unchanged |
 
 ### NotebookLM is optional
 
@@ -160,7 +164,7 @@ Exa search works keyless. To increase its rate limit and enable `--deep`, set th
 ### Sefaria (optional, `judaism` only)
 
 Configured separately as an MCP server; only matters when the resolved domain is
-`judaism`. If unavailable, the `secondary` subagent (Tavily/Exa) carries more weight —
+`judaism`. If unavailable, the web lanes carry more weight —
 Sefaria is never substituted with open-web search for the primary text.
 
 ### Trove (optional)
@@ -176,9 +180,9 @@ Install [notebooklm-mcp-cli](https://github.com/jacob-bd/gemini-notebook-mcp-cli
 nlm login
 ```
 
-### Firecrawl (keyless free tier)
+### Firecrawl (free tier)
 
-The bundled `firecrawl` server points at `https://mcp.firecrawl.dev/v2/mcp` with no key: search, scrape and parse work on Firecrawl's free tier, with a per-network rate limit. `/learn` caps each Firecrawl subagent at 2 searches and 3 scrapes and drops the lane when a call is refused. Crawl, map, extract and the agent endpoints need an account and are not used.
+The bundled `firecrawl` server points at `https://mcp.firecrawl.dev/v2/mcp` with no key: search, scrape and parse work on Firecrawl's keyless free tier, with a per-network rate limit. For a signed-in fallback, install the CLI with `npx -y firecrawl-cli@latest init --all --browser` and sign in on the website (a free account has 1,000 credits a month); `/learn` switches to it when the MCP is missing or refuses a call. `/learn` caps each Firecrawl subagent at 2 searches and 3 scrapes. Crawl, map, extract and the agent endpoints are not used.
 
 ### web-research (optional, self-hosted)
 
@@ -273,7 +277,7 @@ learn-toolkit/                                 # Plugin root (plugins/learn-tool
             ├── notebooklm-loading.md           # Notebook overflow logic
             ├── artifact-generation.md          # NotebookLM tool signatures
             ├── trove-integration.md            # Trove read/write reference
-            ├── firecrawl.md                    # keyless Firecrawl tool reference
+            ├── firecrawl.md                    # Firecrawl (MCP + CLI) reference
             └── web-research.md                 # web-research tool reference
 ```
 

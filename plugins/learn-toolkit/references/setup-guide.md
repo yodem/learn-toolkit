@@ -97,7 +97,9 @@ required — the workflow skips both phases silently if `trove` is not installed
 
 ### Step 3b-2: Firecrawl (keyless, no setup)
 
-The plugin bundles Firecrawl's hosted MCP server (`https://mcp.firecrawl.dev/v2/mcp`) on its keyless free tier: `firecrawl_search`, `firecrawl_scrape` and `firecrawl_parse` work with no key or account. It is rate-limited per network and may refuse calls from VPNs or proxies; `/learn` then drops the Firecrawl lane and continues. If `/mcp` shows it failed, reconnect `plugin:learn-toolkit:firecrawl`.
+The plugin bundles Firecrawl's hosted MCP server (`https://mcp.firecrawl.dev/v2/mcp`) on its keyless free tier: `firecrawl_search`, `firecrawl_scrape` and `firecrawl_parse` work with no key or account. It is rate-limited per network and may refuse calls from VPNs or proxies. For a signed-in fallback, run `npx -y firecrawl-cli@latest init --all --browser` and sign in on the website (free account); `/learn` uses the CLI when the MCP is missing or refused, and otherwise drops the Firecrawl lane and continues.
+
+`/learn` runs two web-search subagents (Tavily, Exa, Firecrawl) by default, one for a simple subject and three for a complex one; the self-hosted web-research open search runs on every run when it is connected. If `/mcp` shows it failed, reconnect `plugin:learn-toolkit:firecrawl`.
 
 ### Step 3c: web-research (optional, self-hosted)
 
