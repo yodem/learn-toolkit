@@ -82,8 +82,8 @@ resolved domain's file in full before dispatching any research.
 
 | Backend | Required? | What it's for | If missing |
 |---------|-----------|----------------|------------|
-| Tavily | One of Tavily/Exa required | General web search, official docs, community discussion | If Exa is also missing, the workflow **stops** before Phase 0.5 with setup instructions — the only hard stop in the whole workflow |
-| Exa | One of Tavily/Exa required | `web_search_exa`, `web_fetch_exa`, and targeted `web_search_advanced_exa` | Same as above |
+| Tavily | One search backend required | General web search, official docs, community discussion | If Exa, Firecrawl and web-research are also missing, the workflow **stops** before Phase 0.5 with setup instructions — the only hard stop in the whole workflow |
+| Exa | One search backend required | `web_search_exa`, `web_fetch_exa`, and targeted `web_search_advanced_exa` | Same as above |
 | Exa Agent | Optional; key required | Opt-in `agent_run` research with `--deep` | Use Tavily research or skip deep results |
 | Sefaria | Optional, `judaism` only | Primary-text search and commentary chains — the authoritative source for that domain | The `secondary` (Tavily/Exa) subagent carries more weight; noted in the domain announcement |
 | Trove | Optional | Unconditional library scan via the `library` subagent (Phase 1) on every domain; interactive field-research offer (Phase 7) | Both phases skip silently — no error, no interruption |
