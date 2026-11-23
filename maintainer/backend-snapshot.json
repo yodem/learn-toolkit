@@ -169,6 +169,7 @@
       "https://exa.ai/docs/websets/dashboard/import-from-csv.md",
       "https://exa.ai/docs/websets/dashboard/integrations.md",
       "https://exa.ai/docs/websets/imports-and-search.md",
+      "https://exa.ai/docs/websets/pricing.md",
       "https://exa.ai/docs/websets/quickstart.md"
     ],
     "tavily": [
@@ -232,6 +233,7 @@
       "https://docs.tavily.com/documentation/integrations/mastra.md",
       "https://docs.tavily.com/documentation/integrations/merge-gateway.md",
       "https://docs.tavily.com/documentation/integrations/microsoft.md",
+      "https://docs.tavily.com/documentation/integrations/mistral.md",
       "https://docs.tavily.com/documentation/integrations/n8n.md",
       "https://docs.tavily.com/documentation/integrations/openai.md",
       "https://docs.tavily.com/documentation/integrations/openclaw.md",
@@ -311,9 +313,9 @@
     "tavily_search"
   ],
   "versions": {
-    "exa-mcp-server": "3.4.3",
-    "exa-py": "2.28.0",
-    "tavily-cli": "0.2.1",
+    "@tavily/cli": "1.0.1",
+    "exa-mcp-server": "3.5.1",
+    "exa-py": "2.29.0",
     "tavily-mcp": "0.2.22",
     "tavily-python": "0.8.5"
   }

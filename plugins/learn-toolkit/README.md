@@ -19,7 +19,7 @@ and offers to file the session into a Trove field-research book.
 
 Installation prompts for both optional keys and stores them in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable. `/learn` then uses the `tvly` CLI (keyless search and extract work without login; run `tvly login` or `tvly init --agent claude-code` for full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Change keys with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Non-interactive `claude plugin install learn-toolkit@learn-toolkit-marketplace --config exa_api_key=…` is for CI only.
 
-For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`. Never paste keys in chat.
+For Tavily CLI fallback: `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`. Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). The CLI now ships from npm as `@tavily/cli` (1.0+) and needs Node.js 20.1 or newer; the installer above installs it. The PyPI `tavily-cli` is deprecated and frozen at 0.2.2 (it still works and only adds a notice on stderr); move to npm with `npx @tavily/cli init`, then `uv tool uninstall tavily-cli`. The npm `tvly init` also adds the Tavily MCP server to Claude Code; `tvly init --skip-skills` signs in without touching agents. Never paste keys in chat.
 
 The workflow needs **at least one** of Tavily, Exa, Firecrawl or web-research to run at all; everything else
 (Sefaria, Trove, NotebookLM) is optional and degrades gracefully when absent. See
@@ -152,8 +152,8 @@ curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly login                                 # opens browser for OAuth
 # or: tvly login --api-key tvly-YOUR_KEY
 ```
-The workflow checks CLI auth with `tvly auth` (not `tvly --status`, whose two-part
-banner drops the auth line when piped). Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8).
+The workflow checks CLI auth with `tvly auth --json` and its `authenticated` field (the
+exit code is 0 even when signed out; `tvly --status` drops the auth line when piped). Search and extract work from `tvly` 0.1.6; `--deep` needs >= 0.1.8 (upgrade with `tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8).
 
 **Option B — MCP server:** enter the key through `/plugin configure learn-toolkit@learn-toolkit-marketplace`. A blank Tavily key leaves the MCP unusable; use the `tvly` CLI or configure the key.
 

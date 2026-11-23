@@ -51,20 +51,24 @@ Sefaria, one of the search backends — degrades the run instead of stopping it.
 tvly --version 2>/dev/null && echo "TAVILY_CLI=true" || echo "TAVILY_CLI=false"
 ```
 
-If found, check authentication with `tvly auth` — **not** `tvly --status`, whose
-two-part banner drops the auth line when piped through `head` and gives a false
-negative:
+If found, check authentication with `tvly auth --json` and read its `authenticated` field.
+`tvly auth` exits 0 even when signed out, so its exit code says nothing; do not use
+`tvly --status` either, whose two-part banner drops the auth line when piped:
 
 ```bash
-tvly auth 2>/dev/null && echo "TAVILY_CLI_AUTH=true" || echo "TAVILY_CLI_AUTH=false"
+tvly auth --json 2>/dev/null | python3 -c "import json,sys; d=json.loads(sys.stdin.read() or '{}'); print('TAVILY_CLI_AUTH=' + ('true' if d.get('authenticated') is True else 'false'))" || echo "TAVILY_CLI_AUTH=false"
 ```
 
+The CLI ships from npm as `@tavily/cli` (version 1.0 and up, Node.js 20.1+). A version
+below 1.0 is the PyPI `tavily-cli`, which is deprecated and frozen at 0.2.2; it still
+works (its notice goes to stderr only). Show it in the matrix as `[Tavily CLI ✓ (PyPI, deprecated)]`
+and tell the user to switch with `npx @tavily/cli init`, then `uv tool uninstall tavily-cli`; never migrate it yourself.
 Below version 0.1.8, which has no `tvly update`, try one upgrade and re-check `tvly --version` once:
 `uv tool upgrade tavily-cli` if `uv tool list` shows `tavily-cli`, otherwise `pipx upgrade
 tavily-cli`. Never pipe the installer script to a shell. Report it in the matrix as `[Tavily CLI ✓ (upgraded <old>→<new>)]`.
 Search and extract work from 0.1.6, so set `HAS_TAVILY_SKILLS=true` whenever `tvly` runs, whether or not the
-upgrade worked. Set `HAS_TAVILY_RESEARCH_CLI=true` only at 0.1.8 or newer, because `--deep` needs `research run
---citation-format --no-wait`. Set `HAS_TAVILY_CLI_AUTH=true` only when `tvly auth` passes; otherwise set it false.
+upgrade worked. Set `HAS_TAVILY_RESEARCH_CLI=true` only at 0.1.8 or newer, because `--deep` needs `tvly research
+<query> --citation-format --no-wait`. Set `HAS_TAVILY_CLI_AUTH=true` only when the probe prints `TAVILY_CLI_AUTH=true`; otherwise set it false.
 
 #### Step 0a-2: Firecrawl CLI
 
@@ -163,8 +167,8 @@ Phase 1 verification gate.
 
 If Tavily is missing:
 > **Tavily is not connected.**
-> **Option A — CLI:** `curl -fsSL https://cli.tavily.com/install.sh | bash`, then
-> `tvly init --agent claude-code` (or `tvly login`).
+> **Option A — CLI** (Node.js 20.1+): `curl -fsSL https://cli.tavily.com/install.sh | bash`
+> (installs `@tavily/cli` from npm), then `tvly init --agent claude-code` (or `tvly login`).
 > **Option B — MCP:** enter your key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`.
 > A blank Tavily key leaves the MCP unusable; `/learn` uses the `tvly` CLI (keyless
 > search and extract work without login; `tvly login` or `tvly init --agent claude-code`
@@ -671,7 +675,7 @@ indefinitely or produces a false stale-state warning.
 | Error | Cause | Action |
 |-------|-------|--------|
 | Tavily, Exa, Firecrawl and web-research all unavailable | No Tavily MCP or CLI, no Exa, no Firecrawl, no web-research server | **STOP workflow.** Show setup instructions for each missing backend. Do not fall back to bare `WebSearch`. This is the only stop condition in the workflow |
-| Tavily CLI auth fails (`tvly auth`) | Not logged in | Set `HAS_TAVILY_CLI_AUTH=false`; keep `HAS_TAVILY_SKILLS=true` for search and extract, and ask the user to run `tvly login` for full CLI access |
+| Tavily CLI not authenticated (`tvly auth --json` shows `"authenticated": false`) | Not logged in | Set `HAS_TAVILY_CLI_AUTH=false`; keep `HAS_TAVILY_SKILLS=true` for search and extract, and ask the user to run `tvly login` for full CLI access |
 | Tavily MCP returns `Invalid Tavily API key` | Tavily key is blank or invalid | Set `HAS_TAVILY_MCP=false`; use `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or enter the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | web-research `failed` with `AUTH_HEADER_REJECTED` (401) | Token is wrong or blank | `HAS_WEB_RESEARCH=false`; continue on Tavily/Exa; tell the user to re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | web-research unreachable | Tailnet down or server stopped | `HAS_WEB_RESEARCH=false`; continue on the other backends |
@@ -683,7 +687,7 @@ indefinitely or produces a false stale-state warning.
 | Exa rate-limit or HTTP 429 error | Keyless Exa throttled by the parallel fan-out | After the fan-out, re-dispatch the starved subagent once, serially, under the keyless Exa budget; tell the user to add an Exa key with `/plugin configure learn-toolkit@learn-toolkit-marketplace` |
 | `agent_run` connection returns 401 | Exa key is blank | `--deep` uses Tavily research or is skipped |
 | `agent_run` still running after 6 re-calls | Long-running job | Report the run ID and continue without deep results |
-| tvly exits 3 | Authentication required | Set HAS_TAVILY_CLI_AUTH=false, continue with search and extract only, and tell the user to run tvly login themselves |
+| tvly exits 3 | Authentication required, keyless rate-limit cap, or plan limit | Set HAS_TAVILY_CLI_AUTH=false, continue with search and extract only, and tell the user to run tvly login themselves |
 | Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; the web lanes carry more weight; continue |
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
 | NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |
