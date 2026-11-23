@@ -51,12 +51,12 @@ Exa works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` u
 curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
-Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, on older versions, `uv tool upgrade tavily-cli`. `/learn` tries that upgrade once itself. From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, on older versions, `uv tool upgrade tavily-cli`. `/learn` tries that upgrade once itself. The CLI now ships from npm as `@tavily/cli` (1.0+) and needs Node.js 20.1 or newer; the installer above installs it. The PyPI `tavily-cli` is deprecated and frozen at 0.2.2 (it still works and only adds a notice on stderr); move to npm with `npx @tavily/cli init`, then `uv tool uninstall tavily-cli`. The npm `tvly init` also adds the Tavily MCP server to Claude Code; `tvly init --skip-skills` signs in without touching agents.
 
-The workflow checks CLI authentication with:
+The workflow checks CLI authentication with `tvly auth --json` and reads its `authenticated` field; `tvly auth` exits 0 even when signed out, so its exit code is no signal:
 
 ```bash
-tvly auth
+tvly auth --json
 ```
 
 **Not** `tvly --status` — its two-part banner drops the auth line when piped through a

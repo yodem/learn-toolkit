@@ -19,7 +19,8 @@ UA = "learn-toolkit-check/1.0"
 EXA_REGISTRY = "https://raw.githubusercontent.com/exa-labs/exa-mcp-server/main/src/toolRegistry.ts"
 TAVILY_MCP = "https://mcp.tavily.com/mcp/"
 PACKAGES = {
-    "tavily-cli": ("https://pypi.org/pypi/tavily-cli/json", ["info", "version"]),
+    # the tvly CLI moved to npm; the PyPI tavily-cli is frozen at 0.2.2 (2026-11-16)
+    "@tavily/cli": ("https://registry.npmjs.org/@tavily/cli/latest", ["version"]),
     "tavily-python": ("https://pypi.org/pypi/tavily-python/json", ["info", "version"]),
     "exa-py": ("https://pypi.org/pypi/exa-py/json", ["info", "version"]),
     "tavily-mcp": ("https://registry.npmjs.org/tavily-mcp/latest", ["version"]),

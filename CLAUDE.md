@@ -40,7 +40,7 @@ Then tell them:
 
 ---
 
-The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; search and extract work from tvly 0.1.6; `--deep` needs >= 0.1.8 (`tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). Never paste keys in chat.
+The plugin stores optional API keys in the system keychain. Exa search works keyless. A blank Tavily key leaves the Tavily MCP unusable; `/learn` uses the `tvly` CLI (keyless search and extract work without login; `tvly login` or `tvly init --agent claude-code` enables full access), or configure the key with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. Configure later with `/plugin configure learn-toolkit@learn-toolkit-marketplace`. For the CLI fallback, install with `curl -fsSL https://cli.tavily.com/install.sh | bash && tvly init --agent claude-code`; search and extract work from tvly 0.1.6; `--deep` needs >= 0.1.8 (`tvly update`, or `uv tool upgrade tavily-cli` below 0.1.8). The CLI now ships from npm as `@tavily/cli` (Node.js 20.1+); the PyPI `tavily-cli` is deprecated at 0.2.2. Never paste keys in chat.
 
 ---
 
@@ -59,14 +59,15 @@ curl -fsSL https://cli.tavily.com/install.sh | bash
 tvly init --agent claude-code
 ```
 
-Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, below 0.1.8, `uv tool upgrade tavily-cli`; `/learn` tries this once itself. Run `tvly login` if authentication is needed. From `tvly` 0.2.1, `tvly init` installs the Tavily skills through `npx` and fails without Node.js (the login is saved by then); `/learn` does not need those skills, so without Node.js run `tvly login` or `tvly init --skip-skills`.
+Search and extract work from `tvly` 0.1.6; `--deep` needs 0.1.8 or newer. Upgrade with `tvly update` (0.1.8+) or, below 0.1.8, `uv tool upgrade tavily-cli`; `/learn` tries this once itself. Run `tvly login` if authentication is needed. The CLI now ships from npm as `@tavily/cli` (1.0+) and needs Node.js 20.1 or newer; the installer above installs it. The PyPI `tavily-cli` is deprecated and frozen at 0.2.2 (it still works and only adds a notice on stderr); move to npm with `npx @tavily/cli init`, then `uv tool uninstall tavily-cli`. The npm `tvly init` also adds the Tavily MCP server to Claude Code; `tvly init --skip-skills` signs in without touching agents.
 
-**Check auth with `tvly auth`, not `tvly --status`** — the latter prints a two-part
-banner whose auth line is lost when piped, giving a false negative. `/learn-toolkit:learn`
-itself checks with `tvly auth` for exactly this reason:
+**Check auth with `tvly auth --json` and read `authenticated`, not the exit code or
+`tvly --status`.** `tvly auth` exits 0 even when signed out, and `--status` prints a
+two-part banner whose auth line is lost when piped. `/learn-toolkit:learn` reads the
+JSON field for exactly this reason:
 
 ```bash
-tvly auth
+tvly auth --json
 ```
 
 This installs Tavily's agent skills, among them:
