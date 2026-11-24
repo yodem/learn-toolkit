@@ -54,6 +54,7 @@ page: https://claude.ai/artifact/UHWmy84No1WbqXjrURP2ux
 scope-ok: docs/plans/2026-11-23-deep-research-lanes/step2.brief.md builder brief for step 2
 scope-ok: docs/plans/2026-11-23-deep-research-lanes/step3.brief.md builder brief for step 3
 scope-ok: docs/plans/2026-11-23-deep-research-lanes/step4.brief.md builder brief for step 4
+scope-ok: docs/plans/2026-11-23-deep-research-lanes/fix1.brief.md builder brief for review fix round 1
 
 ## Review focus
 - Lead calls from the plan review (lens B):
