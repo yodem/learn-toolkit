@@ -1,7 +1,7 @@
 ---
 name: learn
 description: "Domain-aware deep learning workflow. Researches a subject across Tavily, Exa, keyless Firecrawl, Sefaria and Trove (formerly CandleKeep), plus the self-hosted open-search (web-research) server on every run, with two web-search subagents by default (one for a simple subject, three for a complex one), then optionally builds a NotebookLM package and files findings into a Trove field-research book. Routes by domain: tech, philosophy, judaism. Do NOT use for quick factual lookups or for a single URL — use a direct web search instead."
-argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]]"
+argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]] [--gemini[=N]]"
 allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(firecrawl *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
@@ -106,6 +106,8 @@ Run these `ToolSearch` calls in parallel:
 6. `ToolSearch(query="+firecrawl firecrawl_search")` — the keyless (free tier) Firecrawl
    server; match tools ending in `__firecrawl_search`, `__firecrawl_scrape` and
    `__firecrawl_parse`. Details in `${CLAUDE_SKILL_DIR}/references/firecrawl.md`.
+7. `ToolSearch(query="+claude-in-chrome tabs_context")` — match a tool ending in
+   `__tabs_context_mcp`. Only matters with `--gemini`.
 
 Also note whether the `Artifact` tool is in your tool list (it is a built-in Claude Code
 tool, not an MCP server, so no `ToolSearch` is needed).
@@ -124,6 +126,7 @@ Set:
 - `HAS_WEB_RESEARCH` = true if a tool ending in `__batch_crawl_urls` exists on a server whose name contains `web-research`.
 - `HAS_FIRECRAWL_MCP` = true if a tool ending in `__firecrawl_search` was found.
 - `HAS_FIRECRAWL` = true if `HAS_FIRECRAWL_MCP` OR `HAS_FIRECRAWL_CLI`.
+- `HAS_CHROME` = true if a tool ending in `__tabs_context_mcp` was found.
 
 If a Tavily MCP call returns an error containing `Invalid Tavily API key`, set
 `HAS_TAVILY_MCP=false` and continue with the `tvly` CLI if available. Keyless CLI search
@@ -147,8 +150,10 @@ Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exi
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [NotebookLM research ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl MCP ✓/✗] [Firecrawl CLI ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [NotebookLM research ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl MCP ✓/✗] [Firecrawl CLI ✓/✗] [Chrome ✓/✗]
 ```
+
+When `$GEMINI_RUNS` is set, add `(Gemini lane: N runs)` after the Chrome entry.
 
 When `[Web research ✗]` and `/mcp` shows `INVALID_CONFIG`, the URL is blank: that's expected if you don't self-host, so add nothing. Otherwise add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
 token is wrong; re-enter it with `/plugin configure learn-toolkit@learn-toolkit-marketplace`".
@@ -218,7 +223,7 @@ Resolve `$LANGUAGE`: `--language <code>` if passed, else the domain default (`te
 `en`; `philosophy`/`judaism` → `he`).
 
 Derive `$SUBJECT`: `$ARGUMENTS` with every `--flag value` pair (`--domain <x>`,
-`--language <x>`, `--no-notebook`, `--deep`, `--deep=<effort>`) stripped out, leaving only the subject text. This is
+`--language <x>`, `--no-notebook`, `--deep`, `--deep=<effort>`, `--gemini`, `--gemini=<N>`) stripped out, leaving only the subject text. This is
 the value handed to every subagent in Phase 1 and stored as `"topic"` in the state file
 in Phase 2.
 
@@ -227,6 +232,11 @@ Parse deep mode before deriving the subject: bare `--deep` sets `$DEEP_EFFORT=me
 `--deep=<effort>` form: in `--deep high` the word `high` stays part of the subject. Any other
 `--deep=` value prints the allowed values and uses `medium`. Without the flag, leave
 `$DEEP_EFFORT` unset.
+
+Parse the Gemini lane the same way: bare `--gemini` sets `$GEMINI_RUNS=1`; `--gemini=N` sets
+N for N in 1..3 (any other value prints the allowed values and uses 1). `--gemini` alone
+implies deep mode: if `$DEEP_EFFORT` is unset, set it to `medium`. Without the flag, leave
+`$GEMINI_RUNS` unset; the Gemini lane never runs without `--gemini`.
 
 Read `${CLAUDE_SKILL_DIR}/references/domains/$DOMAIN.md` in full before doing anything
 else — it defines the Phase 1 roster, Source Ranking, Query Patterns, and Output
@@ -406,6 +416,20 @@ Phase 2. A failed, timed-out or quota-limited job is recorded in the state key
 `notebooklm_research` and skipped; the run never stops. Follow
 `${CLAUDE_SKILL_DIR}/references/notebooklm-deep-research.md`.
 
+#### Gemini app Deep Research (only with --gemini)
+
+Runs after the NotebookLM lane, in the same Phase 1b, only when `$GEMINI_RUNS` is set and
+`HAS_CHROME` is true. Google Support has told users that automating the Gemini app is not
+permitted, and the lane drives the user's signed-in Google account, so it is opt-in only.
+Through Claude in Chrome it opens a new tab, starts Gemini Deep Research and runs up to
+`$GEMINI_RUNS` reports strictly one at a time (concurrent runs fail). Each report can take
+up to 60 minutes; past that it is recorded as `running` with its chat URL and skipped. Each
+finished report is saved under `~/dev/learn-research/learn-<topic-slug>/gemini-reports/`,
+added to the notebook as a text source, and distilled into `deep_research` digests for
+Phase 2. With `--no-notebook` or no NotebookLM, reports stay local and still feed the
+digests. State goes in `gemini_research`. A failed step is recorded and the run continues.
+Follow `${CLAUDE_SKILL_DIR}/references/gemini-deep-research.md`.
+
 ### Phase 2: Merge and Synthesize
 
 1. Collect every subagent's digest array. Deduplicate by URL (library/primary-text
@@ -432,11 +456,12 @@ Phase 2. A failed, timed-out or quota-limited job is recorded in the state key
    hook ignores it, but Phase 7 reads and updates `candlekeep.write_id` when filing
    findings, so it must be present from the start. When Phase 1b already wrote the file
 (NotebookLM Deep Research), Read it and write it back with these keys, keeping its
-`notebooks`, `total_sources` and `notebooklm_research` values. Also write
-`notebooklm_research` (a list, empty when that lane did not run) and `deep_run_id`:
+`notebooks`, `total_sources`, `notebooklm_research` and `gemini_research` values. Also write
+`notebooklm_research` and `gemini_research` (lists, empty when that lane did not run) and
+`deep_run_id`:
 
 ```bash
-echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"deep_run_id\":\"${DEEP_RUN_ID:-}\",\"notebooklm_research\":[],\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
+echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"deep_run_id\":\"${DEEP_RUN_ID:-}\",\"notebooklm_research\":[],\"gemini_research\":[],\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
 ```
 
 `$TOPIC_SLUG` is the subject lowercased, spaces to hyphens, special characters removed.
@@ -688,6 +713,20 @@ indefinitely or produces a false stale-state warning.
 2. Phase 1 runs normal search. Phase 1b uses Tavily research with numbered citations,
    polls the request to completion, and keeps cited findings in the digest.
 
+### Example 5 — tech, deep research plus two Gemini reports
+
+`/learn-toolkit:learn agent harness engineering --deep --gemini=2`
+
+1. Phase 0: Chrome ✓ (Claude in Chrome connected), so `HAS_CHROME` is true. Phase 0.5
+   sets `$DEEP_EFFORT=medium` and `$GEMINI_RUNS=2`; the subject is "agent harness
+   engineering".
+2. Phase 1b runs the Exa/Tavily deep run and the NotebookLM lane, then the Gemini lane:
+   run 1 (architecture and core concepts) finishes and is saved as `01-<slug>.md`; run 2
+   (verification, quality and evaluation) starts only after that.
+3. Each report is added to the notebook as a text source and distilled into digests;
+   `gemini_research` records both runs. If run 2 still shows "Creating your report" after
+   60 minutes, it is recorded as `running` with its chat URL and the run moves on.
+
 ## Error Recovery
 
 | Error | Cause | Action |
@@ -713,6 +752,11 @@ indefinitely or produces a false stale-state warning.
 | NotebookLM research job failed or timed out | Job `failed`, or no `completed` after ~15 min | Record the status in `notebooklm_research`, skip that job, continue |
 | NotebookLM research quota or rate limit hit | Daily Deep Research limit | Record it in `notebooklm_research`, skip the remaining jobs, continue |
 | NotebookLM research import would pass 98 sources | `98 - total_sources` is smaller than the planned import | Trim the source indices to fit; at budget 0 create the overflow notebook first, then import |
+| `--gemini` passed but Claude in Chrome is not connected | No `__tabs_context_mcp` tool | `HAS_CHROME=false`; skip the Gemini lane, tell the user to connect Claude in Chrome, continue |
+| Gemini shows an error or hangs | "Something went wrong", stuck on "Generating research plan" | Record it in `gemini_research`, retry once serially, then skip that run, continue |
+| Gemini "Deep research" menu item not found | UI changed | Stop the lane after 2-3 attempts, note the UI may have changed (fix in `gemini-deep-research.md`), continue |
+| Gemini report still creating after 60 minutes | Long-running report | Record the chat URL with status `running`, continue |
+| Signed out of Google in the Gemini tab | No session | Ask the user to sign in themselves; never type credentials; skip the lane if they do not |
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |
 | Notebook source count reaches 98 | Cap approaching | Create overflow notebook per `notebooklm-loading.md`, continue |
 | Studio artifact generation fails | NotebookLM internal error | Retry once; if it still fails, report "Failed" in the summary table |
