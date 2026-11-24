@@ -6,7 +6,7 @@ concept, or a Jewish text with domain-aware research routing across Tavily, Exa,
 keyless Firecrawl, Sefaria, and Trove (formerly CandleKeep), and an optional NotebookLM learning package.
 
 ```
-/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]] [--gemini[=N]]
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]] [--gemini[=N]]
 ```
 
 Full documentation — domains, backends, setup, flags, examples, output layout, and API

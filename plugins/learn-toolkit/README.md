@@ -7,7 +7,7 @@ NotebookLM learning package (podcast, infographic, mind map, flashcards, study g
 and offers to file the session into a Trove field-research book.
 
 ```
-/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]] [--gemini[=N]]
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]] [--gemini[=N]]
 ```
 
 ## Install

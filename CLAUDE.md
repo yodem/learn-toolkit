@@ -130,7 +130,7 @@ Plugin **learn-toolkit** installed. Here's what you have:
 | `/learn-toolkit:learn <subject>` | Right away — Exa search works keyless; add keys with `/plugin configure` |
 | Trove (optional) | Automatic library scan + end-of-run write offer, if `trove` CLI installed |
 | NotebookLM (optional) | Podcast/infographic/mind map/flashcards, if `notebooklm-mcp` installed — skip with `--no-notebook` |
-| Gemini Deep Research (optional, opt-in) | `--gemini` or `--gemini=N` (N up to 3) with `--deep`; needs Claude in Chrome signed in to Gemini. Account risk: Google Support says automating the Gemini app is not permitted, and it drives your account. Up to 60 min per report |
+| Gemini Deep Research (optional, opt-in) | `--gemini` or `--gemini=N` (N up to 3); `--gemini` implies `--deep` (sets effort medium when `--deep` is omitted); needs Claude in Chrome signed in to Gemini. Account risk: Google Support says automating the Gemini app is not permitted, and it drives your account. Up to 60 min per report |
 | Tavily Agent Skills | `/tavily-search`, `/tavily-research`, `tvly` CLI — after Step 2b (`tvly init --agent claude-code`) |
 | Firecrawl (keyless) | Right away — free-tier search and scrape, no key |
 | web-research (optional, self-hosted) | Search, crawl and package tools, if `web_research_url` and token are set (Step 3c) |

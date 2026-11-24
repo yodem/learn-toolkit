@@ -455,8 +455,8 @@ Follow `${CLAUDE_SKILL_DIR}/references/gemini-deep-research.md`.
    legacy name because it is persisted on disk): the
    hook ignores it, but Phase 7 reads and updates `candlekeep.write_id` when filing
    findings, so it must be present from the start. When Phase 1b already wrote the file
-(NotebookLM Deep Research), Read it and write it back with these keys, keeping its
-`notebooks`, `total_sources`, `notebooklm_research` and `gemini_research` values. Also write
+(either the NotebookLM or the Gemini lane), Read it and write it back with these keys, keeping its
+`notebooks`, `total_sources`, `notebooklm_research` and `gemini_research` values; never overwrite them with empty values. Also write
 `notebooklm_research` and `gemini_research` (lists, empty when that lane did not run) and
 `deep_run_id`:
 
@@ -524,7 +524,7 @@ path), and `${CLAUDE_SKILL_DIR}/references/artifact-generation.md` for exact too
 signatures.
 
 **Phase 3 — Load into NotebookLM:**
-1. Create notebook `[Topic] - Core Learning`, unless Phase 1b already created it (`notebooks[-1]` in the state file) — then reuse it and keep counting from `total_sources`.
+1. Create notebook `[Topic] - Core Learning`, unless Phase 1b already created it (either lane; `notebooks[-1]` in the state file) — then reuse it and keep counting from `total_sources`.
 2. Add Trove sources first (`wait=false`, title `"Library: [Item Title]"`) if any.
 3. Add remaining URL/primary-text sources (`wait=false`).
 4. Add the research summary as a text source (`wait=true`).
@@ -753,8 +753,8 @@ indefinitely or produces a false stale-state warning.
 | NotebookLM research quota or rate limit hit | Daily Deep Research limit | Record it in `notebooklm_research`, skip the remaining jobs, continue |
 | NotebookLM research import would pass 98 sources | `98 - total_sources` is smaller than the planned import | Trim the source indices to fit; at budget 0 create the overflow notebook first, then import |
 | `--gemini` passed but Claude in Chrome is not connected | No `__tabs_context_mcp` tool | `HAS_CHROME=false`; skip the Gemini lane, tell the user to connect Claude in Chrome, continue |
-| Gemini shows an error or hangs | "Something went wrong", stuck on "Generating research plan" | Record it in `gemini_research`, retry once serially, then skip that run, continue |
-| Gemini "Deep research" menu item not found | UI changed | Stop the lane after 2-3 attempts, note the UI may have changed (fix in `gemini-deep-research.md`), continue |
+| Gemini shows an error or hangs | "Something went wrong", stuck on "Generating research plan" | Record it in `gemini_research`, retry that run once serially, then skip that run and continue with the next |
+| Gemini "Deep research" menu item not found | UI changed | Stop the whole lane after 2-3 attempts, note the UI may have changed (fix in `gemini-deep-research.md`), continue |
 | Gemini report still creating after 60 minutes | Long-running report | Record the chat URL with status `running`, continue |
 | Signed out of Google in the Gemini tab | No session | Ask the user to sign in themselves; never type credentials; skip the lane if they do not |
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |

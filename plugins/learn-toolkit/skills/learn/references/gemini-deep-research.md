@@ -72,11 +72,16 @@ or use `find` for "Creating your report". Past 60 minutes, record the run with s
 
 ## 7. Notebook
 
-When a notebook exists (created by the NotebookLM lane, or `notebooks[-1]`), call
-`source_add` with `source_type=text`, title `Gemini Deep Research NN: <title>`. It counts
-against the 98-source budget; handle overflow per
-`${CLAUDE_SKILL_DIR}/references/notebooklm-loading.md`. With `--no-notebook` or no
-NotebookLM, keep the local file only.
+If `HAS_NOTEBOOKLM` is true, `--no-notebook` was not passed and `notebooks` in the state
+file is empty (the NotebookLM research lane was off or failed before creating one), create
+the `[Topic] - Core Learning` notebook now and record it in `notebooks[]`. Phase 3 reuses it.
+
+When a notebook exists, call `source_add` with `source_type=text`, title
+`Gemini Deep Research NN: <title>`. It counts against the 98-source budget: compute
+`98 - total_sources` first, and handle overflow per
+`${CLAUDE_SKILL_DIR}/references/notebooklm-loading.md`. After each `source_add`, increment
+`total_sources` (and the per-notebook count if the state file keeps one) in the state file.
+With `--no-notebook` or no NotebookLM, keep the local file only.
 
 ## 8. Digests
 
@@ -87,12 +92,18 @@ list, for Phase 2. Never paste the full report into context.
 
 Record each run in the state key `gemini_research`, a list of
 `{"n","chat_url","status","local_path","source_id"}`. Use `null` for fields that do not
-exist yet.
+exist yet. If the state file `/tmp/learn-workflow-state-<topic-slug>.json` does not exist
+yet, create it with the `Write` tool (the five required keys `topic`, `domain`, `notebooks`,
+`total_sources`, `local_path`, plus `candlekeep`, `deep_run_id`, `notebooklm_research`,
+`gemini_research`). If it exists, Read it and update only the keys this lane changes.
 
 ## 10. Failures
 
-- Stop the lane after 2-3 failed browser attempts on one step (menu not found, error banner,
-  no response). Record it and continue the run.
+- A Gemini error or hang ("Something went wrong", stuck on "Generating research plan"):
+  record it in `gemini_research`, retry that run once serially, then skip that run and
+  continue with the next.
+- A menu or UI element not found after 2-3 attempts: stop the whole lane (the UI likely
+  changed) and record it.
 - Do not trigger browser dialogs.
 - Signed out of Google: tell the user to sign in themselves.
 - Close every tab the lane opened with `tabs_close_mcp`, even after a failure.
