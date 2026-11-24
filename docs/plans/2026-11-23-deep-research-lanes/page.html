@@ -1,0 +1,801 @@
+<title>Deep Research Lanes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script type="application/json" id="page-data">{"title": "Deep Research Lanes", "slug": "deep-research-lanes", "stage": "Deciding", "version": 1, "versions": [{"n": 1, "date": "2026-11-23", "label": "First draft"}], "headline": "/learn --deep also runs NotebookLM Deep Research, and Gemini app Deep Research through Chrome.", "plain": "Today --deep runs one Exa or Tavily deep-research job. We add two more lanes. The first runs several focused NotebookLM Deep Research jobs inside the topic's notebook and imports their best sources without passing the notebook's source cap. The second opens gemini.google.com in Chrome, runs Deep Research reports one at a time, and puts each report into the notebook. Both lanes skip cleanly when their tool is missing.", "need": ["Two new reference files that hold the step-by-step procedure for each lane", "SKILL.md changes: tool probes, flags, the lane steps, error rows and one example", "A version bump to 2.5.0 and doc updates"], "assumes": ["NotebookLM's research tools (research_start, research_status, research_import) are on the notebooklm-mcp server the plugin already lists", "A Deep Research run needs an existing notebook; today the notebook is created later, in Phase 3", "Gemini runs only one Deep Research job at a time: today two parallel runs failed with an error", "The research_status task id can differ from the one research_start returned", "Google Support has told users that automating the Gemini app is not permitted, so the Gemini lane carries account risk"], "flow": [{"title": "Probe", "text": "Phase 0 also looks for NotebookLM's research tools and for Claude in Chrome."}, {"title": "NotebookLM lane", "text": "With --deep, create the notebook early and run focused Deep Research jobs one after another, importing the top sources of each within the cap."}, {"title": "Gemini lane", "text": "When enabled, open Gemini in Chrome, pick Deep research, submit a detailed prompt, confirm the plan, wait, copy the report and add it to the notebook."}, {"title": "Synthesis", "text": "Report text is read back and turned into digests for the summary, the learning page and the decision material."}], "questions": [{"id": "Q1", "q": "When does the Gemini app lane run?", "today": "The skill never opens the Gemini app. Today you asked for it by hand.", "why": "It drives your signed-in Google account through a browser. Google Support has said that kind of automation is not permitted, and each report takes 5-60 minutes.", "pick": "Choose when the lane runs and how many reports it may start.", "get": "Long Gemini reports in the notebook without you doing the clicking.", "skip": "Only NotebookLM's built-in Deep Research runs; no Gemini app reports.", "options": [{"l": "A", "t": "Only with a new --gemini flag: one report by default, --gemini=N for up to 3, run one after another"}, {"l": "B", "t": "Automatically with every --deep run when Chrome is connected"}, {"l": "C", "t": "Don't ship the Gemini lane; ship only the NotebookLM lane"}, {"l": "D", "t": "A separate skill (/learn-toolkit:gemini-research) you run on its own, outside /learn"}], "recommended": "A", "touches": ["outward", "spend"], "status": "open", "answer": null}, {"id": "Q2", "q": "When should NotebookLM Deep Research run?", "today": "The notebook is created in Phase 3, after the web research and synthesis.", "why": "Running it early lets its sources and report feed the synthesis; running it late keeps today's phase order.", "pick": "Choose where the lane sits.", "get": "Either a richer synthesis, or a smaller change.", "skip": "The lane can't run, because it needs a notebook.", "options": [{"l": "A", "t": "In Phase 1b: create the notebook early, run the jobs, read the reports back into the digests"}, {"l": "B", "t": "In Phase 3: run the jobs after the notebook is created; the synthesis doesn't use them"}], "recommended": "A", "touches": [], "status": "open", "answer": null}, {"id": "Q3", "q": "How does a Gemini report get into the notebook?", "today": "Not handled.", "why": "Copying the text is simple and keeps everything in this session; exporting to Google Docs keeps formatting and links but writes files to your Drive.", "pick": "Choose the export path.", "get": "The report as a notebook source, plus a local copy in the research folder.", "skip": "Reports stay only in the Gemini chat.", "options": [{"l": "A", "t": "Read the report text from the page, save it locally, add it as a text source"}, {"l": "B", "t": "Export to Google Docs, then add the Doc as a Drive source"}], "recommended": "A", "touches": ["data"], "status": "open", "answer": null}], "defaults": [{"id": "D1", "label": "NotebookLM Deep Research jobs per --deep run", "options": [{"l": "a", "t": "3 focused jobs, one after another"}, {"l": "b", "t": "1 job"}], "default": "a", "touches": [], "answer": null}, {"id": "D2", "label": "Sources imported per job", "options": [{"l": "a", "t": "The report plus the top 12 sources, kept under the 98-source threshold"}, {"l": "b", "t": "All cited sources"}], "default": "a", "touches": [], "answer": null}, {"id": "D3", "label": "Wait for a Gemini report", "options": [{"l": "a", "t": "Up to 60 minutes, checking about every 5 minutes; then report it as still running"}, {"l": "b", "t": "Up to 20 minutes"}], "default": "a", "touches": [], "answer": null}, {"id": "D4", "label": "Release version", "options": [{"l": "a", "t": "2.5.0"}, {"l": "b", "t": "3.0.0"}], "default": "a", "touches": [], "answer": null}], "challenge": {"does": "It adds two optional deep-research lanes to /learn --deep, each with its own reference file.", "alternatives": "The simplest version is the NotebookLM lane only, which uses tools the plugin already connects to and carries no account risk.", "consequences": "The Gemini lane depends on Gemini's web UI, which changed twice in today's run (the menu moved under More tools), so it will need upkeep."}, "history": [{"id": "H1", "at": "2026-11-23", "by": "owner", "text": "Add NotebookLM and Gemini Claude-in-Chrome deep research to the learn toolkit.", "quote": "add notebooklm and gemini claude-in-chrome deep research into my learn toolkit plugin", "superseded_by": null}], "steps": [{"n": 1, "title": "Commit the plan", "plain": "Record the approved plan."}, {"n": 2, "title": "NotebookLM lane", "plain": "Reference file plus SKILL.md probe, lane steps, state field, error rows."}, {"n": 3, "title": "Gemini lane", "plain": "Reference file plus SKILL.md Chrome probe, flag, lane steps, error rows, example."}, {"n": 4, "title": "Version and docs", "plain": "2.5.0 everywhere the repo lists a version; READMEs and setup guide describe the lanes."}, {"n": 5, "title": "Verify", "plain": "Lint, tests, plugin validate, a clean install, and one live run."}], "test": "Run /learn-toolkit:learn on a small topic with --deep --gemini, and see NotebookLM research sources and one Gemini report in the new notebook.", "ships": "learn-toolkit 2.5.0 on the marketplace, once you approve the merge.", "out": ["Gemini API (AI Studio) deep research", "Running Gemini reports in parallel", "Changing the studio artifacts (podcast, mind map and the rest)"]}</script>
+<style>
+/* Layout: one calm centered column; a top bar, a head with two boxes, a needs banner, five tabs, cards for decisions. */
+/* DESIGN.md tokens begin (artifacts/DESIGN.md; keep identical) */
+:root {
+  color-scheme: light;
+  --bg: #faf8ff;
+  --surface: #ffffff;
+  --surface-2: #f4f3fa;
+  --surface-3: #eeedf4;
+  --text: #1a1b21;
+  --muted: #444651;
+  --line: #c5c5d3;
+  --line-soft: #e2e1ea;
+  --accent: #1e3a8a;
+  --accent-ink: #ffffff;
+  --accent-soft: #e4e9fb;
+  --focus: #3b82f6;
+  --ok: #1b6b45;
+  --ok-soft: #e0f2e9;
+  --warn: #8a5300;
+  --warn-soft: #fbeedb;
+  --err: #ba1a1a;
+  --err-soft: #ffdad6;
+  --font-head: "Space Grotesk", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 0.25rem;
+  --radius-card: 0.5rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #14161c;
+    --surface: #1b1e26;
+    --surface-2: #21242d;
+    --surface-3: #292d38;
+    --text: #dcdee6;
+    --muted: #9a9eab;
+    --line: #363a47;
+    --line-soft: #292d38;
+    --accent: #8fa6f0;
+    --accent-ink: #0e1633;
+    --accent-soft: #1f2744;
+    --focus: #6e9bf5;
+    --ok: #6fcf9b;
+    --ok-soft: #173326;
+    --warn: #e8b061;
+    --warn-soft: #382a14;
+    --err: #f0928a;
+    --err-soft: #3d1c1a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14161c;
+  --surface: #1b1e26;
+  --surface-2: #21242d;
+  --surface-3: #292d38;
+  --text: #dcdee6;
+  --muted: #9a9eab;
+  --line: #363a47;
+  --line-soft: #292d38;
+  --accent: #8fa6f0;
+  --accent-ink: #0e1633;
+  --accent-soft: #1f2744;
+  --focus: #6e9bf5;
+  --ok: #6fcf9b;
+  --ok-soft: #173326;
+  --warn: #e8b061;
+  --warn-soft: #382a14;
+  --err: #f0928a;
+  --err-soft: #3d1c1a;
+}
+/* DESIGN.md tokens end */
+:root{
+  --fg:var(--text);
+  --border:var(--line);
+  --accent-fg:var(--accent-ink);
+  --warn-fg:var(--warn);
+  --warn-bg:var(--warn-soft);
+  --warn-border:var(--line);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:var(--font-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:20px 56px;
+  overflow-wrap:anywhere;
+}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3,p,ul,ol,dl,dd,blockquote{margin:0}
+h1{font-size:clamp(1.55rem,4.5vw,2.1rem);line-height:1.2;text-wrap:balance;font-weight:700}
+h2{font-size:1.2rem;line-height:1.3;text-wrap:balance}
+h3{font-size:1rem;line-height:1.35}
+button,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.muted{color:var(--muted)}
+.sm{font-size:.875rem}
+.mono{font-family:var(--font-mono);font-size:.875em}
+
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;justify-content:space-between}
+.topbar .name{font-weight:600;min-width:0}
+.topbar .right{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.btn{
+  min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--accent);
+  background:var(--accent);color:var(--accent-fg);font-weight:600;cursor:pointer;
+}
+.btn:hover{filter:brightness(1.08)}
+.btn.quiet{background:transparent;color:var(--accent)}
+
+.notice{
+  background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-border);
+  border-radius:12px;padding:12px 16px;
+}
+.fallback{display:flex;flex-direction:column;gap:8px}
+.fallback textarea{width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);resize:vertical}
+
+.head{display:flex;flex-direction:column;gap:14px}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.chip{
+  display:inline-block;padding:2px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);
+  font-weight:600;font-size:.875rem;border:1px solid var(--border);
+}
+.plain{max-width:68ch;font-size:1.0625rem}
+.boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.box{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:16px;min-width:0}
+.box h2{font-size:1rem;margin-bottom:8px}
+.box ul,.list{padding-left:1.25rem;display:flex;flex-direction:column;gap:6px}
+
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{
+  min-height:44px;padding:8px 16px;border:1px solid transparent;border-bottom:none;border-radius:10px 10px 0 0;
+  background:transparent;cursor:pointer;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:8px;
+}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--fg);border-color:var(--border);box-shadow:0 1px 0 var(--surface)}
+.badge{
+  min-width:1.5rem;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--accent-fg);
+  font-size:.8125rem;text-align:center;font-variant-numeric:tabular-nums;line-height:1.5rem;
+}
+.needs{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;justify-content:space-between;padding:12px 16px;border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:var(--radius-card);background:var(--surface)}
+.needs.open{border-left-color:var(--warn);background:var(--warn-soft)}
+.needs.blocked{border-left-color:var(--err);background:var(--err-soft)}
+.needs .msg{flex:1 1 240px;min-width:0;font-weight:600}
+.prow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
+.prow .ptitle{flex:1 1 220px;min-width:0}
+.prow .pnote{flex:1 1 100%;color:var(--muted);font-size:.875rem}
+.status{display:inline-block;padding:0 8px;border-radius:999px;font-size:.75rem;font-weight:600;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.status.running{background:var(--accent-soft);color:var(--accent)}
+.status.passed{background:var(--ok-soft);color:var(--ok)}
+.status.failed,.status.blocked{background:var(--err-soft);color:var(--err)}
+.panel{display:flex;flex-direction:column;gap:24px;min-width:0}
+.section{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+.flow,.steps{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.flow li,.steps li{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.num{
+  width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;font-size:.9rem;
+}
+.jump{
+  text-align:left;min-height:44px;padding:8px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;
+  display:flex;gap:10px;align-items:baseline;width:100%;
+}
+.jump:hover{border-color:var(--accent)}
+.stack{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.settled-row{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+
+.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.card-head h3{flex:1 1 240px;min-width:0;font-size:1.0625rem}
+.tag{
+  display:inline-block;padding:0 8px;border-radius:6px;background:var(--surface-2);color:var(--muted);
+  font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--border);
+}
+.tag.pick{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px}
+dl.facts dt{color:var(--muted);font-size:.875rem;padding-top:2px}
+dl.facts dd{min-width:0}
+@media (max-width:560px){dl.facts{grid-template-columns:1fr;gap:0}dl.facts dd{margin-bottom:8px}}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{
+  min-height:44px;padding:8px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;
+  display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;text-align:left;width:100%;
+}
+.opt:hover{border-color:var(--accent)}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.opt .letter{font-weight:700;color:var(--accent);min-width:1.25rem}
+.opt .txt{flex:1 1 160px;min-width:0}
+.note-label{font-size:.875rem;color:var(--muted)}
+textarea.note{width:100%;min-height:72px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--fg);resize:vertical}
+.answer-line{font-size:.9375rem;color:var(--accent);font-weight:600}
+.defaults{display:flex;flex-direction:column;gap:10px}
+.drow{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.drow .dl{flex:1 1 200px;min-width:0}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pills .opt{width:auto}
+
+.entry{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:6px}
+.entry.old .etext{text-decoration:line-through;color:var(--muted)}
+.entry blockquote{border-left:3px solid var(--border);padding-left:12px;color:var(--muted);font-style:italic}
+.meta{font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.vrow{display:flex;flex-wrap:wrap;gap:4px 12px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="name" id="topname"></div>
+    <div class="right">
+      <span class="muted sm" id="save" role="status" aria-live="polite">answers save as you mark</span>
+      <button type="button" class="btn" id="copy">Copy answers</button>
+    </div>
+  </header>
+  <div class="notice" id="nodb" role="note" hidden>This view can't save answers. Use Copy answers and paste them in chat.</div>
+  <div class="fallback" id="fallback" hidden>
+    <label class="note-label" for="fallback-text">Select this text and copy it.</label>
+    <textarea id="fallback-text" readonly></textarea>
+  </div>
+  <section class="head" id="head"></section>
+  <div class="needs" id="needs-banner" role="status" aria-live="polite"></div>
+  <div>
+    <div class="tabs" role="tablist" aria-label="Plan sections" id="tabs"></div>
+  </div>
+  <main id="panels"></main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var D;
+  try { D = JSON.parse(document.getElementById("page-data").textContent); }
+  catch (e) { document.body.textContent = "The page data could not be read."; return; }
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+  function add(parent) {
+    for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]);
+    return parent;
+  }
+  function day(s) { return String(s || "").slice(0, 10); }
+  function optText(item, letter) {
+    var o = (item.options || []).filter(function (x) { return x.l === letter; })[0];
+    return o ? letter + ". " + o.t : letter;
+  }
+
+  var questions = D.questions || [];
+  var defaults = D.defaults || [];
+  var items = {};
+  questions.concat(defaults).forEach(function (it) { items[it.id] = it; });
+
+  // state[id] = {choice, note, at, by}; seeded from the answers already in the data
+  var state = {};
+  questions.concat(defaults).forEach(function (it) {
+    if (it.answer) state[it.id] = { choice: it.answer.choice, note: it.answer.note, at: it.answer.at, by: it.answer.by };
+  });
+
+  function choiceOf(it) {
+    var s = state[it.id];
+    if (s && typeof s.choice === "string") return s.choice;
+    return it.default !== undefined ? it.default : "";
+  }
+  function noteOf(it) { var s = state[it.id]; return s && s.note ? s.note : ""; }
+  function isOpen(q) { return q.status === "open" && !choiceOf(q); }
+
+  // progress[stepId] = {status, note, at}; written by drive-build into the page database (collection "progress", doc "s<n>")
+  var progress = {};
+  var STATUS_WORDS = { pending: "pending", running: "running", passed: "passed", failed: "failed", blocked: "blocked" };
+
+  var db = null;
+  var pending = 0;
+  var saveTimers = {};
+
+  /* ---------- top bar and head ---------- */
+  var versions = (D.versions || []).slice();
+  var latest = versions[versions.length - 1] || { n: D.version, label: "", date: "" };
+  $("topname").textContent = D.title + " · v" + D.version;
+  document.title = D.title;
+
+  (function buildHead() {
+    var head = $("head");
+    head.appendChild(el("h1", "", D.headline));
+    var chips = el("div", "chips");
+    chips.appendChild(el("span", "chip", D.stage));
+    chips.appendChild(el("span", "muted sm", "v" + latest.n + " " + latest.label + (latest.date ? " · " + latest.date : "")));
+    head.appendChild(chips);
+    head.appendChild(el("p", "plain", D.plain));
+    var boxes = el("div", "boxes");
+    var need = el("div", "box");
+    need.appendChild(el("h2", "", "What I need from you"));
+    if ((D.need || []).length) {
+      var ul = el("ul");
+      D.need.forEach(function (t) { ul.appendChild(el("li", "", t)); });
+      need.appendChild(ul);
+    } else {
+      need.appendChild(el("p", "", "Nothing. Reply go in chat."));
+    }
+    var assumes = el("div", "box");
+    assumes.appendChild(el("h2", "", "This plan assumes"));
+    var ul2 = el("ul");
+    (D.assumes || []).forEach(function (t) { ul2.appendChild(el("li", "", t)); });
+    assumes.appendChild(ul2);
+    add(boxes, need, assumes);
+    head.appendChild(boxes);
+  })();
+
+  /* ---------- tabs ---------- */
+  var TAB_NAMES = ["Plan now", "Decide", "Steps", "History", "Progress"];
+  var tabButtons = [], panels = [];
+  var badge = el("span", "badge", "0");
+  var tabsEl = $("tabs"), panelsEl = $("panels");
+  TAB_NAMES.forEach(function (name, i) {
+    var b = el("button", "tab");
+    b.type = "button";
+    b.id = "tab-" + i;
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-controls", "panel-" + i);
+    b.appendChild(document.createTextNode(name));
+    if (name === "Decide") b.appendChild(badge);
+    b.addEventListener("click", function () { showTab(i, true); });
+    b.addEventListener("keydown", function (e) {
+      var n = tabButtons.length, j = -1;
+      if (e.key === "ArrowRight") j = (i + 1) % n;
+      else if (e.key === "ArrowLeft") j = (i + n - 1) % n;
+      else if (e.key === "Home") j = 0;
+      else if (e.key === "End") j = n - 1;
+      if (j >= 0) { e.preventDefault(); showTab(j, true); tabButtons[j].focus(); }
+    });
+    tabsEl.appendChild(b);
+    tabButtons.push(b);
+    var p = el("section", "panel");
+    p.id = "panel-" + i;
+    p.setAttribute("role", "tabpanel");
+    p.setAttribute("aria-labelledby", "tab-" + i);
+    p.hidden = true;
+    panelsEl.appendChild(p);
+    panels.push(p);
+  });
+  function showTab(i, remember) {
+    tabButtons.forEach(function (b, k) {
+      b.setAttribute("aria-selected", k === i ? "true" : "false");
+      b.tabIndex = k === i ? 0 : -1;
+      panels[k].hidden = k !== i;
+    });
+    if (remember) { try { localStorage.setItem("drive-plan-page-tab", String(i)); } catch (e) {} }
+  }
+
+  /* ---------- tab 1: Plan now ---------- */
+  var needsList = el("ul", "stack"), settledList = el("ul", "stack");
+  (function buildNow() {
+    var p = panels[0];
+    if ((D.flow || []).length) {
+      var s = el("div", "section");
+      s.appendChild(el("h2", "", "How it works"));
+      var ol = el("ol", "flow");
+      D.flow.forEach(function (b, i) {
+        var li = el("li");
+        add(li, el("span", "num", String(i + 1)), el("strong", "", b.title), el("span", "muted", b.text));
+        ol.appendChild(li);
+      });
+      s.appendChild(ol);
+      p.appendChild(s);
+    }
+    var n = el("div", "section");
+    n.appendChild(el("h2", "", "Needs you"));
+    n.appendChild(needsList);
+    p.appendChild(n);
+    var st = el("div", "section");
+    st.appendChild(el("h2", "", "Settled"));
+    st.appendChild(settledList);
+    p.appendChild(st);
+    var o = el("div", "section");
+    o.appendChild(el("h2", "", "Out this round"));
+    if ((D.out || []).length) {
+      var ul = el("ul", "list");
+      D.out.forEach(function (t) { ul.appendChild(el("li", "", t)); });
+      o.appendChild(ul);
+    } else {
+      o.appendChild(el("p", "muted", "Nothing is held back."));
+    }
+    p.appendChild(o);
+  })();
+
+  function renderNow() {
+    needsList.textContent = "";
+    settledList.textContent = "";
+    var open = questions.filter(isOpen);
+    if (!open.length) {
+      var none = el("li", "muted", "Nothing needs you right now.");
+      needsList.appendChild(none);
+    }
+    open.forEach(function (q) {
+      var li = el("li");
+      var b = el("button", "jump");
+      b.type = "button";
+      add(b, el("span", "mono", q.id), el("span", "", q.q));
+      b.addEventListener("click", function () { jumpTo(q.id); });
+      li.appendChild(b);
+      needsList.appendChild(li);
+    });
+    var any = false;
+    questions.forEach(function (q) {
+      if (isOpen(q)) return;
+      any = true;
+      var s = state[q.id] || {};
+      var who = q.status === "settled" ? (s.by || "owner") : "you, marked on this page";
+      var li = el("li", "settled-row");
+      add(li, el("span", "", q.id + " " + q.q),
+        el("span", "answer-line", optText(q, choiceOf(q))),
+        el("span", "meta", who + (s.at ? " · " + day(s.at) : "")));
+      settledList.appendChild(li);
+    });
+    defaults.forEach(function (d) {
+      var s = state[d.id];
+      if (!s && choiceOf(d) === d.default) return;
+      if (s && !d.answer && s.choice === d.default && !s.note) return;
+      any = true;
+      var li = el("li", "settled-row");
+      add(li, el("span", "", d.id + " " + d.label),
+        el("span", "answer-line", optText(d, choiceOf(d))),
+        el("span", "meta", ((s && s.by) || "you, marked on this page") + (s && s.at ? " · " + day(s.at) : "")));
+      settledList.appendChild(li);
+    });
+    if (!any) settledList.appendChild(el("li", "muted", "Nothing is settled yet."));
+    badge.textContent = String(open.length);
+    badge.setAttribute("aria-label", open.length + " open");
+    renderBanner(open);
+  }
+
+  /* ---------- needs banner ---------- */
+  function renderBanner(open) {
+    var b = $("needs-banner");
+    b.textContent = "";
+    var stuck = (D.steps || []).map(function (st) { return "s" + st.n; }).filter(function (k) { return progress[k]; }).filter(function (k) { return progress[k].status === "blocked" || progress[k].status === "failed"; });
+    var msg, kind = "", target = -1, label = "";
+    if (open.length) {
+      kind = "open";
+      msg = open.length + (open.length === 1 ? " decision is waiting for you." : " decisions are waiting for you.");
+      target = 1; label = "Go to Decide";
+    } else if (stuck.length) {
+      kind = "blocked";
+      msg = "The build needs you: " + stuck.length + (stuck.length === 1 ? " step is" : " steps are") + " blocked or failed.";
+      target = 4; label = "See Progress";
+    } else {
+      msg = "Nothing needs you right now. Reply go in chat when you are ready.";
+    }
+    b.className = "needs" + (kind ? " " + kind : "");
+    b.appendChild(el("span", "msg", msg));
+    if (target >= 0) {
+      var go = el("button", "btn", label);
+      go.type = "button";
+      go.addEventListener("click", function () { showTab(target, true); });
+      b.appendChild(go);
+    }
+  }
+
+  /* ---------- tab 2: Decide ---------- */
+  var cardRefs = {};   // id -> {card, buttons:{letter:btn}, note, line}
+  var defaultRefs = {};
+  var LABELS = [["today", "Today"], ["why", "Why it matters"], ["pick", "My pick"], ["get", "What we get"], ["skip", "If we skip it"]];
+
+  function optButton(it, o, cls, isRec, isDef) {
+    var b = el("button", "opt");
+    b.type = "button";
+    b.setAttribute("aria-pressed", "false");
+    b.appendChild(el("span", "letter", o.l));
+    b.appendChild(el("span", "txt", o.t));
+    if (isRec) b.appendChild(el("span", "tag pick", "my pick"));
+    if (isDef) b.appendChild(el("span", "tag", "default"));
+    return b;
+  }
+
+  (function buildDecide() {
+    var p = panels[1];
+    var qs = el("div", "section");
+    qs.appendChild(el("h2", "", "Questions"));
+    if (!questions.length) qs.appendChild(el("p", "muted", "There are no questions for this plan."));
+    questions.forEach(function (q) {
+      var card = el("article", "card");
+      card.id = "card-" + q.id;
+      card.tabIndex = -1;
+      var head = el("div", "card-head");
+      head.appendChild(el("span", "mono muted", q.id));
+      head.appendChild(el("h3", "", q.q));
+      (q.touches || []).forEach(function (t) { head.appendChild(el("span", "tag", "touches " + t)); });
+      card.appendChild(head);
+      var dl = el("dl", "facts");
+      LABELS.forEach(function (pair) {
+        dl.appendChild(el("dt", "", pair[1]));
+        dl.appendChild(el("dd", "", q[pair[0]]));
+      });
+      card.appendChild(dl);
+      var line = el("p", "answer-line");
+      card.appendChild(line);
+      var opts = el("div", "opts");
+      opts.setAttribute("role", "group");
+      opts.setAttribute("aria-label", "Options for " + q.id);
+      var buttons = {};
+      q.options.forEach(function (o) {
+        var b = optButton(q, o, "", o.l === q.recommended, false);
+        b.addEventListener("click", function () {
+          var cur = choiceOf(q);
+          setAnswer(q.id, { choice: cur === o.l ? "" : o.l });
+        });
+        opts.appendChild(b);
+        buttons[o.l] = b;
+      });
+      card.appendChild(opts);
+      var nid = "note-" + q.id;
+      var lab = el("label", "note-label", "Note (optional)");
+      lab.setAttribute("for", nid);
+      var ta = el("textarea", "note");
+      ta.id = nid;
+      ta.addEventListener("input", function () { setAnswer(q.id, { note: ta.value }, true); });
+      add(card, lab, ta);
+      qs.appendChild(card);
+      cardRefs[q.id] = { card: card, buttons: buttons, note: ta, line: line };
+    });
+    p.appendChild(qs);
+
+    var ds = el("div", "section");
+    ds.appendChild(el("h2", "", "My defaults"));
+    ds.appendChild(el("p", "muted", "Each default is my pick, not a neutral state. Flip the ones you disagree with."));
+    var wrap = el("div", "defaults");
+    defaults.forEach(function (d) {
+      var row = el("div", "drow");
+      var lab = el("div", "dl");
+      add(lab, el("span", "mono muted", d.id + " "), el("strong", "", d.label));
+      row.appendChild(lab);
+      var pills = el("div", "pills");
+      pills.setAttribute("role", "group");
+      pills.setAttribute("aria-label", d.label);
+      var buttons = {};
+      d.options.forEach(function (o) {
+        var b = optButton(d, o, "", false, o.l === d.default);
+        b.addEventListener("click", function () { setAnswer(d.id, { choice: o.l }); });
+        pills.appendChild(b);
+        buttons[o.l] = b;
+      });
+      row.appendChild(pills);
+      wrap.appendChild(row);
+      defaultRefs[d.id] = { buttons: buttons };
+    });
+    ds.appendChild(wrap);
+    p.appendChild(ds);
+  })();
+
+  function renderDecide() {
+    questions.forEach(function (q) {
+      var r = cardRefs[q.id], c = choiceOf(q), s = state[q.id] || {};
+      Object.keys(r.buttons).forEach(function (l) { r.buttons[l].setAttribute("aria-pressed", l === c ? "true" : "false"); });
+      if (document.activeElement !== r.note && r.note.value !== noteOf(q)) r.note.value = noteOf(q);
+      if (c) {
+        var who = q.status === "settled" ? (s.by || "owner") : "you";
+        r.line.textContent = (q.status === "settled" ? "Settled: " : "Marked: ") + optText(q, c) + " · " + who + (s.at ? " · " + day(s.at) : "");
+      } else {
+        r.line.textContent = "";
+      }
+    });
+    defaults.forEach(function (d) {
+      var r = defaultRefs[d.id], c = choiceOf(d);
+      Object.keys(r.buttons).forEach(function (l) { r.buttons[l].setAttribute("aria-pressed", l === c ? "true" : "false"); });
+    });
+  }
+
+  function jumpTo(id) {
+    showTab(1, true);
+    var r = cardRefs[id];
+    if (!r) return;
+    r.card.scrollIntoView({ block: "start" });
+    r.card.focus({ preventScroll: true });
+  }
+
+  /* ---------- tab 3: Steps ---------- */
+  (function buildSteps() {
+    var p = panels[2];
+    var s = el("div", "section");
+    s.appendChild(el("h2", "", "Steps"));
+    var ol = el("ol", "steps");
+    (D.steps || []).forEach(function (st) {
+      var li = el("li");
+      add(li, el("span", "num", String(st.n)), el("strong", "", st.title), el("span", "muted", st.plain));
+      ol.appendChild(li);
+    });
+    s.appendChild(ol);
+    p.appendChild(s);
+    var t = el("div", "section");
+    add(t, el("h2", "", "How we test it"), el("p", "", D.test));
+    p.appendChild(t);
+    var w = el("div", "section");
+    add(w, el("h2", "", "Where it ships"), el("p", "", D.ships));
+    p.appendChild(w);
+  })();
+
+  /* ---------- tab 4: History ---------- */
+  (function buildHistory() {
+    var p = panels[3];
+    var h = el("div", "section");
+    h.appendChild(el("h2", "", "History"));
+    var list = (D.history || []).map(function (e, i) { return { e: e, i: i }; });
+    list.sort(function (a, b) { return a.e.at < b.e.at ? 1 : a.e.at > b.e.at ? -1 : b.i - a.i; });
+    if (!list.length) h.appendChild(el("p", "muted", "No history yet."));
+    list.forEach(function (x) {
+      var e = x.e;
+      var box = el("article", "entry" + (e.superseded_by ? " old" : ""));
+      var meta = el("div", "meta", e.at + " · " + e.by + " · " + e.id);
+      var txt = el("p", "etext", e.text);
+      add(box, meta, txt);
+      if (e.quote) box.appendChild(el("blockquote", "", e.quote));
+      if (e.superseded_by) box.appendChild(el("p", "meta", "superseded by " + e.superseded_by));
+      h.appendChild(box);
+    });
+    p.appendChild(h);
+    var v = el("div", "section");
+    v.appendChild(el("h2", "", "Versions"));
+    versions.slice().reverse().forEach(function (ver) {
+      var row = el("div", "vrow");
+      add(row, el("strong", "", "v" + ver.n), el("span", "meta", ver.date), el("span", "", ver.label));
+      v.appendChild(row);
+    });
+    p.appendChild(v);
+  })();
+
+  /* ---------- tab 5: Progress ---------- */
+  var progressList = el("div", "stack");
+  (function buildProgress() {
+    var p = panels[4];
+    var s = el("div", "section");
+    s.appendChild(el("h2", "", "Progress"));
+    s.appendChild(el("p", "muted sm", "Each step shows the state drive-build last wrote for it. Nothing here is typed by hand."));
+    s.appendChild(progressList);
+    p.appendChild(s);
+  })();
+
+  function renderProgress() {
+    progressList.textContent = "";
+    var steps = D.steps || [];
+    steps.forEach(function (st) {
+      var pr = progress["s" + st.n] || {};
+      var status = STATUS_WORDS[pr.status] || "pending";
+      var row = el("div", "prow");
+      add(row, el("span", "num", String(st.n)), el("strong", "ptitle", st.title), el("span", "status " + status, status));
+      if (pr.at) row.appendChild(el("span", "meta", day(pr.at)));
+      if (pr.note) row.appendChild(el("span", "pnote", pr.note));
+      progressList.appendChild(row);
+    });
+    if (!steps.length) progressList.appendChild(el("p", "muted", "There are no steps yet."));
+  }
+
+  function applyProgress(snap) {
+    snap.docs.forEach(function (d) {
+      if (d.exists === false) { delete progress[d.id]; return; }
+      var v = d.data();
+      if (!v || typeof v.status !== "string") return;
+      progress[d.id] = { status: v.status, note: typeof v.note === "string" ? v.note.slice(0, 400) : "", at: typeof v.at === "string" ? v.at : "" };
+    });
+    renderProgress();
+    renderNow();
+  }
+
+  /* ---------- answers ---------- */
+  function setSave(t) { $("save").textContent = t; }
+
+  function setAnswer(id, patch, debounce) {
+    var it = items[id];
+    var s = state[id] || { choice: choiceOf(it), note: "", at: "", by: "" };
+    if (patch.choice !== undefined) s.choice = patch.choice;
+    if (patch.note !== undefined) s.note = patch.note;
+    s.by = "you";
+    state[id] = s;
+    renderNow();
+    renderDecide();
+    if (debounce) {
+      clearTimeout(saveTimers[id]);
+      saveTimers[id] = setTimeout(function () { persist(id); }, 600);
+    } else {
+      persist(id);
+    }
+  }
+
+  function persist(id) {
+    var s = state[id];
+    s.at = new Date().toISOString();
+    if (!db) { setSave("not saved here"); return; }
+    pending++;
+    setSave("saving…");
+    var doc = { choice: s.choice || "", note: s.note || "", at: s.at };
+    var done = function (ok) {
+      pending--;
+      if (!ok) setSave("not saved, try again");
+      else if (pending === 0) setSave("saved");
+    };
+    try {
+      db.collection("answers").doc(id).set(doc).then(function () { done(true); }, function () { done(false); });
+    } catch (e) { done(false); }
+  }
+
+  function applySnapshot(snap) {
+    if (pending > 0) return;
+    snap.docs.forEach(function (d) {
+      if (d.exists === false) return;
+      var it = items[d.id], v = d.data();
+      if (!it || !v) return;
+      var s = state[d.id] || { choice: choiceOf(it), note: "", at: "", by: "" };
+      if (typeof v.choice === "string" && (v.choice === "" || it.options.some(function (o) { return o.l === v.choice; }))) {
+        if (!(v.choice === "" && it.default !== undefined)) s.choice = v.choice;
+      }
+      if (typeof v.note === "string") s.note = v.note;
+      if (typeof v.at === "string") s.at = v.at;
+      s.by = s.by || "you";
+      state[d.id] = s;
+    });
+    renderNow();
+    renderDecide();
+  }
+
+  function withTimeout(promise, ms) {
+    return new Promise(function (resolve, reject) {
+      var t = setTimeout(function () { reject(new Error("timeout")); }, ms);
+      promise.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
+    });
+  }
+
+  async function connect() {
+    try {
+      db = await withTimeout(Promise.resolve(window.claude && window.claude.use ? window.claude.use("db") : null), 10000);
+    } catch (e) { db = null; }
+    if (!db) {
+      $("nodb").hidden = false;
+      setSave("not saved here");
+      return;
+    }
+    try {
+      db.collection("answers").onSnapshot(applySnapshot, function () { setSave("offline"); });
+    } catch (e) { /* the page still works without live answers */ }
+    try {
+      db.collection("progress").onSnapshot(applyProgress, function () { /* Progress stays at pending */ });
+    } catch (e) { /* the page still works without live progress */ }
+  }
+
+  /* ---------- copy answers ---------- */
+  function answersText() {
+    var lines = [D.title + " v" + D.version + ", my answers"];
+    function one(id, choice, note) {
+      note = (note || "").trim().replace(/\s*[\r\n]+\s*/g, " / ");
+      lines.push(id + ": " + (choice || "no choice") + (note ? " | " + note : ""));
+    }
+    questions.forEach(function (q) {
+      var c = choiceOf(q), n = noteOf(q).trim();
+      if (c || n) one(q.id, c, n);
+    });
+    defaults.forEach(function (d) {
+      if (choiceOf(d) !== d.default) one(d.id, choiceOf(d), noteOf(d));
+    });
+    return lines.join("\n");
+  }
+  $("copy").addEventListener("click", function () {
+    var text = answersText();
+    var fb = $("fallback"), ft = $("fallback-text");
+    function fallback() {
+      ft.value = text;
+      fb.hidden = false;
+      ft.focus();
+      ft.select();
+      setSave("select the text and copy it");
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        fb.hidden = true;
+        setSave("answers copied");
+      }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  /* ---------- start ---------- */
+  var start = 0;
+  try {
+    var saved = parseInt(localStorage.getItem("drive-plan-page-tab"), 10);
+    if (saved >= 0 && saved < TAB_NAMES.length) start = saved;
+  } catch (e) {}
+  renderProgress();
+  renderNow();
+  renderDecide();
+  showTab(start, false);
+  connect();
+})();
+</script>
