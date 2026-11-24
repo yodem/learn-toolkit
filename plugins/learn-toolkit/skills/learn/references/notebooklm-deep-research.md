@@ -21,8 +21,8 @@ Never write a server prefix in a call.
 Call `notebook_create` with title `[Topic] - Core Learning`. Phase 3 reuses it, so
 record it at once. Use the `Write` tool to create the state file
 `/tmp/learn-workflow-state-<topic-slug>.json` with the five required keys (`topic`,
-`domain`, `notebooks`, `total_sources`, `local_path`), `candlekeep`, and
-`notebooklm_research: []`. Put the notebook in `notebooks[]` as
+`domain`, `notebooks`, `total_sources`, `local_path`), `candlekeep`, `deep_run_id`,
+`notebooklm_research: []`, and `gemini_research: []`. Put the notebook in `notebooks[]` as
 `{"id","name","url","source_count":0}`. Phase 2 updates this file instead of replacing it.
 
 ## 2. Three scoped questions

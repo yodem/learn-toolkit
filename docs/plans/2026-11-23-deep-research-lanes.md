@@ -55,6 +55,7 @@ scope-ok: docs/plans/2026-11-23-deep-research-lanes/step2.brief.md builder brief
 scope-ok: docs/plans/2026-11-23-deep-research-lanes/step3.brief.md builder brief for step 3
 scope-ok: docs/plans/2026-11-23-deep-research-lanes/step4.brief.md builder brief for step 4
 scope-ok: docs/plans/2026-11-23-deep-research-lanes/fix1.brief.md builder brief for review fix round 1
+scope-ok: docs/plans/2026-11-23-deep-research-lanes/fix2.brief.md builder brief for review follow-ups
 
 ## Review focus
 - Lead calls from the plan review (lens B):

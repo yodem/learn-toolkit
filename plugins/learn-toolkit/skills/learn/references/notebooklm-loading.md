@@ -105,7 +105,7 @@ Update the state file after EVERY notebook creation and source addition. Read it
 With `--deep`, the NotebookLM Deep Research lane (see
 `${CLAUDE_SKILL_DIR}/references/notebooklm-deep-research.md`) may already have created
 the topic notebook and imported sources into it. Reuse `notebooks[-1]` from the state file
-instead of creating a second one, and keep counting from `total_sources`. The state key
+instead of creating a second one, and keep counting from `total_sources`. The Gemini Deep Research lane (`--gemini`, see `${CLAUDE_SKILL_DIR}/references/gemini-deep-research.md`) can also create `[Topic] - Core Learning` in Phase 1b when this lane did not; its runs go in the state key `gemini_research`. The state key
 `notebooklm_research` records each research job (`query`, `task_id`, `status`, `imported`,
 `report_source_id`). Budget every import against the 98-source threshold: before importing,
 compute `98 - total_sources` and trim the import or overflow to a new notebook.

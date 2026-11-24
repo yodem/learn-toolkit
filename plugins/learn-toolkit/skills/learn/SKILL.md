@@ -436,7 +436,7 @@ Follow `${CLAUDE_SKILL_DIR}/references/gemini-deep-research.md`.
    entries dedupe by id instead).
 2. Rank by the resolved domain's `## Source Ranking` order. A `deep_research` entry takes
    the tier of its cited source; when that is unclear, rank it just below the domain's
-   first tier. Digests from the NotebookLM Deep Research lane merge with the other
+   first tier. Digests from the NotebookLM and Gemini Deep Research lanes merge with the other
    `deep_research` entries.
 3. Write a synthesis of at least ~500 words (~3000 characters — the validation hook
    warns below 2500), drawing only from the digests' `why_it_matters` and `key_claims`,

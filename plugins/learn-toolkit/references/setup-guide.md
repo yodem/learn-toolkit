@@ -126,6 +126,7 @@ Plugin **learn-toolkit** (v2.5.0) installed. Here's what you have:
 | Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=low\|medium\|high\|xhigh]] [--gemini[=N]]` | After plugin configuration (optional) |
 | Trove (optional) | Library scan + field-research offer, no flags needed | If `trove` CLI installed |
 | NotebookLM (optional) | Notebook + artifact package, or skip with `--no-notebook` | If `notebooklm-mcp` configured |
+| Gemini Deep Research (optional, opt-in) | `--gemini` or `--gemini=N` (N up to 3); implies `--deep` | Needs Claude in Chrome signed in to Gemini; see the account risk in `CLAUDE.md` |
 
 **After installation (keys optional):**
 ```
