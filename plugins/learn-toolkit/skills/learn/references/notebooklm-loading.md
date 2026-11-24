@@ -99,3 +99,13 @@ the workflow's validation hook, which rejects the file if any is missing. The si
 start and used by Phase 7 to track the field-research book id.
 
 Update the state file after EVERY notebook creation and source addition. Read it before any operation.
+
+## Notebook created in Phase 1b
+
+With `--deep`, the NotebookLM Deep Research lane (see
+`${CLAUDE_SKILL_DIR}/references/notebooklm-deep-research.md`) may already have created
+the topic notebook and imported sources into it. Reuse `notebooks[-1]` from the state file
+instead of creating a second one, and keep counting from `total_sources`. The state key
+`notebooklm_research` records each research job (`query`, `task_id`, `status`, `imported`,
+`report_source_id`). Budget every import against the 98-source threshold: before importing,
+compute `98 - total_sources` and trim the import or overflow to a new notebook.

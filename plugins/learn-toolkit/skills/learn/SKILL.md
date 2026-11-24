@@ -98,7 +98,8 @@ Run these `ToolSearch` calls in parallel:
    `mcp__claude_ai_Sefaria__text_search`. Only needed if the domain resolves to
    `judaism`, but cheap to check now alongside the others.
 4. `ToolSearch(query="+notebooklm")` — look for `mcp__notebooklm-mcp__notebook_create`,
-   `source_add`, `studio_create`, `studio_status`.
+   `source_add`, `studio_create`, `studio_status`. Also look for `research_start`,
+   `research_status` and `research_import`, used only by the `--deep` NotebookLM lane.
 5. `ToolSearch(query="batch_crawl_urls stealth_scrape")` — the optional self-hosted
    web-research server; details in `${CLAUDE_SKILL_DIR}/references/web-research.md`. If it
    finds nothing, re-run this one query once after the other probes finish; never retry per subagent.
@@ -118,6 +119,7 @@ Set:
   `exa-agent` means it needs auth: show `[Exa Agent ✗ (needs auth / Exa key)]`, not "not found".
 - `HAS_SEFARIA` = true if `mcp__claude_ai_Sefaria__text_search` was found.
 - `HAS_NOTEBOOKLM` = true if the NotebookLM tools were found.
+- `HAS_NOTEBOOKLM_RESEARCH` = true if `HAS_NOTEBOOKLM` and the three research tools were found.
 - `HAS_ARTIFACT` = true if the `Artifact` tool is available.
 - `HAS_WEB_RESEARCH` = true if a tool ending in `__batch_crawl_urls` exists on a server whose name contains `web-research`.
 - `HAS_FIRECRAWL_MCP` = true if a tool ending in `__firecrawl_search` was found.
@@ -145,7 +147,7 @@ Set `HAS_TROVE = true` only when `trove` exists. If only the legacy `ck` CLI exi
 #### Report the matrix
 
 ```
-Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl MCP ✓/✗] [Firecrawl CLI ✓/✗]
+Research backends: [Tavily MCP ✓/✗] [Tavily CLI ✓/✗] [Tavily CLI auth ✓/✗] [Exa ✓/✗] [Exa Agent ✓/✗] [Sefaria ✓/✗] [Trove ✓/✗] [NotebookLM ✓/✗] [NotebookLM research ✓/✗] [Artifact ✓/✗] [Web research ✓/✗] [Firecrawl MCP ✓/✗] [Firecrawl CLI ✓/✗]
 ```
 
 When `[Web research ✗]` and `/mcp` shows `INVALID_CONFIG`, the URL is blank: that's expected if you don't self-host, so add nothing. Otherwise add: "if you configured it, run `/mcp`; `failed` with `AUTH_HEADER_REJECTED` there means the
@@ -392,13 +394,26 @@ from the response's `sources[]`. Drop a finding only when the run returned no ci
 sources at all. Keep the run ID as `DEEP_RUN_ID=<run id>`; Phase 2 writes it to the state file as
 `deep_run_id`, and a follow-up deep run may pass it as `previousRunId`.
 
+#### NotebookLM Deep Research
+
+Runs after the Exa/Tavily deep run, in the same Phase 1b, only when `$DEEP_EFFORT` is set,
+`HAS_NOTEBOOKLM_RESEARCH` is true and `--no-notebook` was not passed. It creates the topic
+notebook `[Topic] - Core Learning` early and records it in the state file's `notebooks[]`.
+It then runs three scoped NotebookLM Deep Research jobs one after another (core concepts,
+best practices, debates and failure modes), imports each report plus its top 12 sources
+under the 98-source budget, and reads each report back as `deep_research` digests for
+Phase 2. A failed, timed-out or quota-limited job is recorded in the state key
+`notebooklm_research` and skipped; the run never stops. Follow
+`${CLAUDE_SKILL_DIR}/references/notebooklm-deep-research.md`.
+
 ### Phase 2: Merge and Synthesize
 
 1. Collect every subagent's digest array. Deduplicate by URL (library/primary-text
    entries dedupe by id instead).
 2. Rank by the resolved domain's `## Source Ranking` order. A `deep_research` entry takes
    the tier of its cited source; when that is unclear, rank it just below the domain's
-   first tier.
+   first tier. Digests from the NotebookLM Deep Research lane merge with the other
+   `deep_research` entries.
 3. Write a synthesis of at least ~500 words (~3000 characters — the validation hook
    warns below 2500), drawing only from the digests' `why_it_matters` and `key_claims`,
    not from re-fetching pages. It has one section per tier of the
@@ -415,10 +430,13 @@ sources at all. Keep the run ID as `DEEP_RUN_ID=<run id>`; Phase 2 writes it to 
    missing. Also write a sixth top-level key, `candlekeep` (`read_ids`, `write_id`; the key keeps its
    legacy name because it is persisted on disk): the
    hook ignores it, but Phase 7 reads and updates `candlekeep.write_id` when filing
-   findings, so it must be present from the start:
+   findings, so it must be present from the start. When Phase 1b already wrote the file
+(NotebookLM Deep Research), Read it and write it back with these keys, keeping its
+`notebooks`, `total_sources` and `notebooklm_research` values. Also write
+`notebooklm_research` (a list, empty when that lane did not run) and `deep_run_id`:
 
 ```bash
-echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"deep_run_id\":\"${DEEP_RUN_ID:-}\",\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
+echo "{\"topic\":\"$SUBJECT\",\"domain\":\"$DOMAIN\",\"notebooks\":[],\"total_sources\":0,\"candlekeep\":{\"read_ids\":[],\"write_id\":null},\"deep_run_id\":\"${DEEP_RUN_ID:-}\",\"notebooklm_research\":[],\"local_path\":\"$HOME/dev/learn-research/learn-$TOPIC_SLUG/\"}" > "/tmp/learn-workflow-state-$TOPIC_SLUG.json"
 ```
 
 `$TOPIC_SLUG` is the subject lowercased, spaces to hyphens, special characters removed.
@@ -481,7 +499,7 @@ path), and `${CLAUDE_SKILL_DIR}/references/artifact-generation.md` for exact too
 signatures.
 
 **Phase 3 — Load into NotebookLM:**
-1. Create notebook `[Topic] - Core Learning`.
+1. Create notebook `[Topic] - Core Learning`, unless Phase 1b already created it (`notebooks[-1]` in the state file) — then reuse it and keep counting from `total_sources`.
 2. Add Trove sources first (`wait=false`, title `"Library: [Item Title]"`) if any.
 3. Add remaining URL/primary-text sources (`wait=false`).
 4. Add the research summary as a text source (`wait=true`).
@@ -691,6 +709,10 @@ indefinitely or produces a false stale-state warning.
 | Sefaria MCP not found (domain=judaism) | Not configured | Note in the domain announcement; the web lanes carry more weight; continue |
 | NotebookLM not found, or `--no-notebook` passed | Not configured / user opted out | Skip phases 3-5, continue. Emit the single skip notice, omit notebook/artifact tables, proceed to Phase 6 |
 | NotebookLM auth expired | Token expired | `nlm` is not in `allowed-tools` and login is a credential action — ask the user to run `nlm login` themselves (in Claude Code they can type `! nlm login` so the output lands in-session); once they confirm it succeeded, retry once |
+| NotebookLM research tools not found | Older `notebooklm-mcp` without `research_*` | `HAS_NOTEBOOKLM_RESEARCH=false`; skip the NotebookLM Deep Research lane, continue |
+| NotebookLM research job failed or timed out | Job `failed`, or no `completed` after ~15 min | Record the status in `notebooklm_research`, skip that job, continue |
+| NotebookLM research quota or rate limit hit | Daily Deep Research limit | Record it in `notebooklm_research`, skip the remaining jobs, continue |
+| NotebookLM research import would pass 98 sources | `98 - total_sources` is smaller than the planned import | Trim the source indices to fit; at budget 0 create the overflow notebook first, then import |
 | Source add fails for one URL | Blocked or invalid URL | Log it, skip it, continue with remaining sources |
 | Notebook source count reaches 98 | Cap approaching | Create overflow notebook per `notebooklm-loading.md`, continue |
 | Studio artifact generation fails | NotebookLM internal error | Retry once; if it still fails, report "Failed" in the summary table |
