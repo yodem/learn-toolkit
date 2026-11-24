@@ -17,10 +17,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      - run: pip install 'ruff==0.8.6'
       - run: bash scripts/verify.sh
       - name: test integrity
         if: github.event_name == 'pull_request'
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: bash scripts/test-integrity.sh origin/${{ github.base_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: bash scripts/test-integrity.sh "origin/$BASE_REF"
