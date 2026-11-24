@@ -7,7 +7,7 @@ NotebookLM learning package (podcast, infographic, mind map, flashcards, study g
 and offers to file the session into a Trove field-research book.
 
 ```
-/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]] [--gemini[=N]]
 ```
 
 ## Install
@@ -124,6 +124,14 @@ Since Exa 3.0 (Oct 2026) subagents pick an advanced-search `type`: `lite` for ch
 ### Deep research (`--deep`)
 
 `--deep` opts into Exa Agent with medium effort by default. Set `--deep=low|medium|high|xhigh` to choose the effort. Approximate prices per run are low $0.025, medium $0.10, high $0.50, and xhigh $1.00 ([Exa Agent quickstart](https://exa.ai/docs/agent/quickstart)). The plugin deliberately does not offer Exa's metered `auto` and `ultra` efforts, so a `--deep` run always has a fixed price. When the Exa key is blank, the workflow uses Tavily research if the CLI is available; otherwise it reports that a key is needed and continues.
+
+`--deep` also adds two extra lanes after the Exa/Tavily run.
+
+**NotebookLM Deep Research.** When NotebookLM is set up and `--no-notebook` is not passed, NotebookLM runs its own web Deep Research on three scoped questions (core concepts, current best practices, open debates and failure modes). Jobs run one after another. Each report and its top 12 sources are imported into the topic notebook under the 98-source budget, and the report is read back as digests for synthesis. A failed or timed-out job is skipped and the run continues. See `skills/learn/references/notebooklm-deep-research.md`.
+
+**Gemini app Deep Research (`--gemini`, opt-in).** `--gemini` runs one Gemini app Deep Research report. `--gemini=N` runs up to N reports, with N at most 3. It drives the Gemini web app in your Chrome through Claude in Chrome. Needs Claude in Chrome connected and signed in to Gemini. Reports take up to 60 minutes each and run one at a time. Finished reports are saved under `~/dev/learn-research/learn-<topic-slug>/gemini-reports/` and added to the notebook as text sources. See `skills/learn/references/gemini-deep-research.md`.
+
+Account risk: Google Support has said that automating the Gemini app is not permitted. This lane drives your signed-in Google account. It is opt-in only and never runs without `--gemini`.
 
 ### Trove
 
@@ -254,7 +262,7 @@ hit.
 ```
 learn-toolkit/                                 # Plugin root (plugins/learn-toolkit/)
 ├── .claude-plugin/
-│   └── plugin.json                            # Plugin manifest (name, version 2.4.0)
+│   └── plugin.json                            # Plugin manifest (name, version 2.5.0)
 ├── .mcp.json                                   # MCP servers (tavily, exa, exa-agent, firecrawl, web-research); keys from userConfig
 ├── hooks/
 │   ├── hooks.json
@@ -274,6 +282,8 @@ learn-toolkit/                                 # Plugin root (plugins/learn-tool
             │   ├── tech.md
             │   ├── philosophy.md
             │   └── judaism.md
+            ├── notebooklm-deep-research.md    # NotebookLM Deep Research lane (--deep)
+            ├── gemini-deep-research.md        # Gemini app Deep Research lane (--gemini)
             ├── notebooklm-loading.md           # Notebook overflow logic
             ├── artifact-generation.md          # NotebookLM tool signatures
             ├── trove-integration.md            # Trove read/write reference

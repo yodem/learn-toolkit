@@ -5,7 +5,7 @@ argument-hint: "<subject> [--domain tech|philosophy|judaism] [--language <code>]
 allowed-tools: Task, Write, Read, Artifact, Bash(tvly *), Bash(firecrawl *), Bash(uv tool list), Bash(uv tool upgrade tavily-cli), Bash(pipx upgrade tavily-cli), Bash(mktemp *), Bash(python3 *), Bash(trove *), Bash(ck *), Bash(echo *), Bash(mkdir *), Bash(test *), Bash(cat *), Bash(cp *)
 metadata:
   author: Yotam Fromm
-  version: 2.4.0
+  version: 2.5.0
   mcp-server: tavily, exa, exa-agent, firecrawl, web-research, notebooklm-mcp
   category: learning
   tags: [research, domains, tavily, exa, firecrawl, sefaria, trove, notebooklm]

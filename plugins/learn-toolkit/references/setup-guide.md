@@ -107,17 +107,23 @@ An optional self-hosted backend ([elad12390/web-research-assistant](https://gith
 
 In the plugin, the user sets `web_research_url` (`http://<WRA_BIND_IP>:8765/mcp`) and `web_research_token` with `/plugin configure learn-toolkit@learn-toolkit-marketplace`, then runs `/reload-plugins`. The token is typed into the configure prompt. Both settings are optional: a blank URL fails only the web-research server ("URL is unset or invalid"), and Tavily and Exa still connect. A wrong token shows as failed with `AUTH_HEADER_REJECTED` (401) in `/mcp`.
 
+### Step 3d: Claude in Chrome (optional, for --gemini)
+
+Only needed for the opt-in `--gemini` lane. Connect Claude in Chrome and sign in to Gemini in that Chrome. The lane drives your signed-in Google account, and Google Support has said automating the Gemini app is not permitted, so use it only if you accept that risk. Without it, `--gemini` is skipped.
+
+The NotebookLM Deep Research lane needs no extra setup. It runs with `--deep` whenever NotebookLM is set up and `--no-notebook` is not passed.
+
 ### Step 4: Confirm
 
 Tell the user:
 
 ---
 
-Plugin **learn-toolkit** (v2.4.0) installed. Here's what you have:
+Plugin **learn-toolkit** (v2.5.0) installed. Here's what you have:
 
 | Skill | Command | Ready? |
 |-------|---------|--------|
-| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=low\|medium\|high\|xhigh]]` | After plugin configuration (optional) |
+| Deep Learning | `/learn-toolkit:learn <subject> [--domain tech\|philosophy\|judaism] [--language <code>] [--no-notebook] [--deep[=low\|medium\|high\|xhigh]] [--gemini[=N]]` | After plugin configuration (optional) |
 | Trove (optional) | Library scan + field-research offer, no flags needed | If `trove` CLI installed |
 | NotebookLM (optional) | Notebook + artifact package, or skip with `--no-notebook` | If `notebooklm-mcp` configured |
 
