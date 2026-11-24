@@ -1,0 +1,292 @@
+{
+  "title": "Deep Research Lanes",
+  "slug": "deep-research-lanes",
+  "stage": "Deciding",
+  "version": 2,
+  "versions": [
+    {
+      "n": 1,
+      "date": "2026-11-23",
+      "label": "First draft"
+    },
+    {
+      "n": 2,
+      "date": "2026-11-23",
+      "label": "answers: Q1, Q2, Q3"
+    }
+  ],
+  "headline": "/learn --deep also runs NotebookLM Deep Research, and Gemini app Deep Research through Chrome.",
+  "plain": "Today --deep runs one Exa or Tavily deep-research job. We add two more lanes. The first runs several focused NotebookLM Deep Research jobs inside the topic's notebook and imports their best sources without passing the notebook's source cap. The second opens gemini.google.com in Chrome, runs Deep Research reports one at a time, and puts each report into the notebook. Both lanes skip cleanly when their tool is missing.",
+  "need": [
+    "Two new reference files that hold the step-by-step procedure for each lane",
+    "SKILL.md changes: tool probes, flags, the lane steps, error rows and one example",
+    "A version bump to 2.5.0 and doc updates"
+  ],
+  "assumes": [
+    "NotebookLM's research tools (research_start, research_status, research_import) are on the notebooklm-mcp server the plugin already lists",
+    "A Deep Research run needs an existing notebook; today the notebook is created later, in Phase 3",
+    "Gemini runs only one Deep Research job at a time: today two parallel runs failed with an error",
+    "The research_status task id can differ from the one research_start returned",
+    "Google Support has told users that automating the Gemini app is not permitted, so the Gemini lane carries account risk"
+  ],
+  "flow": [
+    {
+      "title": "Probe",
+      "text": "Phase 0 also looks for NotebookLM's research tools and for Claude in Chrome."
+    },
+    {
+      "title": "NotebookLM lane",
+      "text": "With --deep, create the notebook early and run focused Deep Research jobs one after another, importing the top sources of each within the cap."
+    },
+    {
+      "title": "Gemini lane",
+      "text": "When enabled, open Gemini in Chrome, pick Deep research, submit a detailed prompt, confirm the plan, wait, copy the report and add it to the notebook."
+    },
+    {
+      "title": "Synthesis",
+      "text": "Report text is read back and turned into digests for the summary, the learning page and the decision material."
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "q": "When does the Gemini app lane run?",
+      "today": "The skill never opens the Gemini app. Today you asked for it by hand.",
+      "why": "It drives your signed-in Google account through a browser. Google Support has said that kind of automation is not permitted, and each report takes 5-60 minutes.",
+      "pick": "Choose when the lane runs and how many reports it may start.",
+      "get": "Long Gemini reports in the notebook without you doing the clicking.",
+      "skip": "Only NotebookLM's built-in Deep Research runs; no Gemini app reports.",
+      "options": [
+        {
+          "l": "A",
+          "t": "Only with a new --gemini flag: one report by default, --gemini=N for up to 3, run one after another"
+        },
+        {
+          "l": "B",
+          "t": "Automatically with every --deep run when Chrome is connected"
+        },
+        {
+          "l": "C",
+          "t": "Don't ship the Gemini lane; ship only the NotebookLM lane"
+        },
+        {
+          "l": "D",
+          "t": "A separate skill (/learn-toolkit:gemini-research) you run on its own, outside /learn"
+        }
+      ],
+      "recommended": "A",
+      "touches": [
+        "outward",
+        "spend"
+      ],
+      "status": "settled",
+      "answer": {
+        "choice": "A",
+        "note": "",
+        "at": "2026-11-23T21:16:02.512Z",
+        "by": "Yotam"
+      }
+    },
+    {
+      "id": "Q2",
+      "q": "When should NotebookLM Deep Research run?",
+      "today": "The notebook is created in Phase 3, after the web research and synthesis.",
+      "why": "Running it early lets its sources and report feed the synthesis; running it late keeps today's phase order.",
+      "pick": "Choose where the lane sits.",
+      "get": "Either a richer synthesis, or a smaller change.",
+      "skip": "The lane can't run, because it needs a notebook.",
+      "options": [
+        {
+          "l": "A",
+          "t": "In Phase 1b: create the notebook early, run the jobs, read the reports back into the digests"
+        },
+        {
+          "l": "B",
+          "t": "In Phase 3: run the jobs after the notebook is created; the synthesis doesn't use them"
+        }
+      ],
+      "recommended": "A",
+      "touches": [],
+      "status": "settled",
+      "answer": {
+        "choice": "A",
+        "note": "",
+        "at": "2026-11-23T21:16:11.395Z",
+        "by": "Yotam"
+      }
+    },
+    {
+      "id": "Q3",
+      "q": "How does a Gemini report get into the notebook?",
+      "today": "Not handled.",
+      "why": "Copying the text is simple and keeps everything in this session; exporting to Google Docs keeps formatting and links but writes files to your Drive.",
+      "pick": "Choose the export path.",
+      "get": "The report as a notebook source, plus a local copy in the research folder.",
+      "skip": "Reports stay only in the Gemini chat.",
+      "options": [
+        {
+          "l": "A",
+          "t": "Read the report text from the page, save it locally, add it as a text source"
+        },
+        {
+          "l": "B",
+          "t": "Export to Google Docs, then add the Doc as a Drive source"
+        }
+      ],
+      "recommended": "A",
+      "touches": [
+        "data"
+      ],
+      "status": "settled",
+      "answer": {
+        "choice": "A",
+        "note": "",
+        "at": "2026-11-23T21:16:16.645Z",
+        "by": "Yotam"
+      }
+    }
+  ],
+  "defaults": [
+    {
+      "id": "D1",
+      "label": "NotebookLM Deep Research jobs per --deep run",
+      "options": [
+        {
+          "l": "a",
+          "t": "3 focused jobs, one after another"
+        },
+        {
+          "l": "b",
+          "t": "1 job"
+        }
+      ],
+      "default": "a",
+      "touches": [],
+      "answer": null
+    },
+    {
+      "id": "D2",
+      "label": "Sources imported per job",
+      "options": [
+        {
+          "l": "a",
+          "t": "The report plus the top 12 sources, kept under the 98-source threshold"
+        },
+        {
+          "l": "b",
+          "t": "All cited sources"
+        }
+      ],
+      "default": "a",
+      "touches": [],
+      "answer": null
+    },
+    {
+      "id": "D3",
+      "label": "Wait for a Gemini report",
+      "options": [
+        {
+          "l": "a",
+          "t": "Up to 60 minutes, checking about every 5 minutes; then report it as still running"
+        },
+        {
+          "l": "b",
+          "t": "Up to 20 minutes"
+        }
+      ],
+      "default": "a",
+      "touches": [],
+      "answer": null
+    },
+    {
+      "id": "D4",
+      "label": "Release version",
+      "options": [
+        {
+          "l": "a",
+          "t": "2.5.0"
+        },
+        {
+          "l": "b",
+          "t": "3.0.0"
+        }
+      ],
+      "default": "a",
+      "touches": [],
+      "answer": null
+    }
+  ],
+  "challenge": {
+    "does": "It adds two optional deep-research lanes to /learn --deep, each with its own reference file.",
+    "alternatives": "The simplest version is the NotebookLM lane only, which uses tools the plugin already connects to and carries no account risk.",
+    "consequences": "The Gemini lane depends on Gemini's web UI, which changed twice in today's run (the menu moved under More tools), so it will need upkeep."
+  },
+  "history": [
+    {
+      "id": "H1",
+      "at": "2026-11-23",
+      "by": "owner",
+      "text": "Add NotebookLM and Gemini Claude-in-Chrome deep research to the learn toolkit.",
+      "quote": "add notebooklm and gemini claude-in-chrome deep research into my learn toolkit plugin",
+      "superseded_by": null
+    },
+    {
+      "id": "H2",
+      "at": "2026-11-23T21:16:02.512Z",
+      "by": "Yotam",
+      "text": "Q1: A Only with a new --gemini flag: one report by default, --gemini=N for up to 3, run one after another",
+      "quote": "",
+      "superseded_by": null
+    },
+    {
+      "id": "H3",
+      "at": "2026-11-23T21:16:11.395Z",
+      "by": "Yotam",
+      "text": "Q2: A In Phase 1b: create the notebook early, run the jobs, read the reports back into the digests",
+      "quote": "",
+      "superseded_by": null
+    },
+    {
+      "id": "H4",
+      "at": "2026-11-23T21:16:16.645Z",
+      "by": "Yotam",
+      "text": "Q3: A Read the report text from the page, save it locally, add it as a text source",
+      "quote": "",
+      "superseded_by": null
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Commit the plan",
+      "plain": "Record the approved plan."
+    },
+    {
+      "n": 2,
+      "title": "NotebookLM lane",
+      "plain": "Reference file plus SKILL.md probe, lane steps, state field, error rows."
+    },
+    {
+      "n": 3,
+      "title": "Gemini lane",
+      "plain": "Reference file plus SKILL.md Chrome probe, flag, lane steps, error rows, example."
+    },
+    {
+      "n": 4,
+      "title": "Version and docs",
+      "plain": "2.5.0 everywhere the repo lists a version; READMEs and setup guide describe the lanes."
+    },
+    {
+      "n": 5,
+      "title": "Verify",
+      "plain": "Lint, tests, plugin validate, a clean install, and one live run."
+    }
+  ],
+  "test": "Run /learn-toolkit:learn on a small topic with --deep --gemini, and see NotebookLM research sources and one Gemini report in the new notebook.",
+  "ships": "learn-toolkit 2.5.0 on the marketplace, once you approve the merge.",
+  "out": [
+    "Gemini API (AI Studio) deep research",
+    "Running Gemini reports in parallel",
+    "Changing the studio artifacts (podcast, mind map and the rest)"
+  ]
+}

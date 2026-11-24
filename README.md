@@ -6,12 +6,14 @@ concept, or a Jewish text with domain-aware research routing across Tavily, Exa,
 keyless Firecrawl, Sefaria, and Trove (formerly CandleKeep), and an optional NotebookLM learning package.
 
 ```
-/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=high|xhigh]]
+/learn-toolkit:learn <subject> [--domain tech|philosophy|judaism] [--language <code>] [--no-notebook] [--deep[=low|medium|high|xhigh]] [--gemini[=N]]
 ```
 
 Full documentation — domains, backends, setup, flags, examples, output layout, and API
 key safety — lives in the plugin itself:
 [`plugins/learn-toolkit/README.md`](plugins/learn-toolkit/README.md).
+
+`--deep` also runs a NotebookLM Deep Research lane when NotebookLM is set up. Add `--gemini` (or `--gemini=N`, N up to 3) to opt in to a Gemini app Deep Research lane. It needs Claude in Chrome and drives your signed-in Google account, and Google Support has said automating the Gemini app is not permitted.
 
 ## Install
 
@@ -64,7 +66,7 @@ learn-toolkit/                                  # Repository root — marketplac
 ├── maintainer/                                 # Backend drift checker + tests (not shipped)
 ├── infra/web-research/                         # Optional self-hosted web-research server
 ├── docs/superpowers/                           # Design specs and plans
-└── plugins/learn-toolkit/                      # The installable plugin (v2.4.0)
+└── plugins/learn-toolkit/                      # The installable plugin (v2.5.0)
     ├── .claude-plugin/plugin.json               # Plugin manifest
     ├── .mcp.json                                # MCP servers (tavily, exa, exa-agent, firecrawl, web-research); keys from userConfig
     ├── hooks/                                   # Output/artifact validation hooks
