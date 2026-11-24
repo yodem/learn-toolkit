@@ -51,6 +51,10 @@ page: https://claude.ai/artifact/UHWmy84No1WbqXjrURP2ux
 - Running Gemini reports in parallel.
 - Changing the studio artifacts (podcast, mind map and the rest).
 
+scope-ok: docs/plans/2026-11-23-deep-research-lanes/step2.brief.md builder brief for step 2
+scope-ok: docs/plans/2026-11-23-deep-research-lanes/step3.brief.md builder brief for step 3
+scope-ok: docs/plans/2026-11-23-deep-research-lanes/step4.brief.md builder brief for step 4
+
 ## Review focus
 - Lead calls from the plan review (lens B):
   - `--gemini` alone implies `--deep` (it sets `$DEEP_EFFORT=medium` when unset).
