@@ -12,6 +12,8 @@ LISTER = (
     "import json, os, sys\n"
     "if os.path.exists('crash'):\n    sys.exit(3)\n"
     "if os.path.exists('garbage'):\n    print('not json'); sys.exit(0)\n"
+    "if os.path.exists('rewrite.json'):\n"
+    "    for p, c in json.load(open('rewrite.json')).items():\n        open(p, 'w').write(c)\n"
     "for line in open('tests.jsonl'):\n    sys.stdout.write(line)\n"
 )
 CONFIG = {
@@ -43,6 +45,8 @@ class GateCase(unittest.TestCase):
         self.git("config", "user.name", "t")
         self.write("lister.py", LISTER)
         self.write("tests.jsonl", jl(("a.py::T.one", False), ("a.py::T.two", False)))
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n    def two(self):\n        pass\n")
+        self.write(".github/workflows/ci.yml", "name: x\n")
         self.write("package.json", json.dumps({"scripts": {"test": "node --test"}}))
         self.cfg = os.path.join(self.tmp, "cfg.json")
         self.dump(self.cfg, CONFIG)
@@ -69,7 +73,7 @@ class GateCase(unittest.TestCase):
         self.git("add", "-A")
         self.git("commit", "-q", "-m", msg)
 
-    def run_gate(self, body=None, labels=None, events=None, base_ref=None):
+    def run_gate(self, body=None, labels=None, events=None, base_ref=None, extra=()):
         argv = [sys.executable, str(CORE), "run", "--config", self.cfg, "--base-tree", self.base_tree,
                 "--head-tree", self.repo, "--base-ref", base_ref or self.base_ref]
         for flag, content, name in (("--pr-body-file", body, "body.txt"), ("--labels-file", labels, "labels.txt"),
@@ -79,7 +83,7 @@ class GateCase(unittest.TestCase):
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(content if isinstance(content, str) else json.dumps(content))
                 argv += [flag, path]
-        proc = subprocess.run(argv, capture_output=True, text=True)
+        proc = subprocess.run(argv + list(extra), capture_output=True, text=True)
         return proc.returncode, proc.stdout + proc.stderr
 
     def head_tests(self, *items):
@@ -158,14 +162,14 @@ class Verdicts(GateCase):
         self.assertNotIn("missing on head: fake::a.py::T.two", out)
 
     def test_guarded_path_without_label_fails(self):
-        self.write(".github/workflows/ci.yml", "name: x\n")
+        self.write(".github/workflows/new.yml", "name: y\n")
         self.commit("head")
         code, out = self.run_gate()
         self.assertEqual(code, 1)
-        self.assertIn(".github/workflows/ci.yml", out)
+        self.assertIn(".github/workflows/new.yml", out)
 
     def test_guarded_path_with_maintainer_label_passes(self):
-        self.write(".github/workflows/ci.yml", "name: x\n")
+        self.write(".github/workflows/new.yml", "name: y\n")
         self.commit("head")
         code, out = self.run_gate("", "tests-removed", [event("boss")])
         self.assertEqual(code, 0, out)
@@ -189,6 +193,77 @@ class Verdicts(GateCase):
         pages = json.dumps([event("boss")]) + json.dumps([event("intruder")])
         code, _ = self.run_gate(body, "tests-removed", pages)
         self.assertEqual(code, 1)
+
+
+class Hardening(GateCase):
+    def test_non_ascii_workflow_name_is_guarded(self):
+        self.write(".github/workflows/d\u00e9ploy.yml", "name: z\n")
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 1)
+        self.assertIn("d\u00e9ploy.yml", out)
+
+    def test_moving_guarded_workflow_out_is_guarded(self):
+        os.makedirs(os.path.join(self.repo, "docs"))
+        self.git("mv", ".github/workflows/ci.yml", "docs/ci.yml")
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 1)
+        self.assertIn(".github/workflows/ci.yml", out)
+
+    def test_forged_lister_output_is_caught_by_source_check(self):
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n")  # test two deleted, lister still lists it
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 1)
+        self.assertIn("missing on head (not found in source): fake::a.py::T.two", out)
+
+    def test_head_lister_cannot_rewrite_judge_inputs(self):
+        self.head_tests(("a.py::T.one", False))
+        paths = {n: os.path.join(self.tmp, n) for n in ("body.txt", "labels.txt", "events.json")}
+        self.write("rewrite.json", json.dumps({
+            paths["body.txt"]: "tests-removed: fake::a.py::T.two" + REASON,
+            paths["labels.txt"]: "tests-removed",
+            paths["events.json"]: json.dumps([event("boss")])}))
+        self.commit("head2")
+        code, out = self.run_gate("", "", "[]")
+        self.assertEqual(code, 1, out)
+        self.assertIn("fake::a.py::T.two", out)
+
+    def test_lister_timeout_is_2(self):
+        slow = dict(CONFIG, suites=[dict(CONFIG["suites"][0], cmd=["python3", "-c", "import time; time.sleep(30)"],
+                                         timeout_s=1)])
+        self.dump(self.cfg, slow)
+        code, out = self.run_gate()
+        self.assertEqual(code, 2)
+        self.assertIn("timed out", out)
+
+    def test_absent_discovery_root_lists_zero_and_shows_removed_on_head(self):
+        def tree(name, with_extra):
+            root = os.path.join(self.tmp, name)
+            for d in (["tests", "extra"] if with_extra else ["tests"]):
+                os.makedirs(os.path.join(root, d))
+                with open(os.path.join(root, d, "test_%s.py" % d), "w", encoding="utf-8") as f:
+                    f.write("import unittest\nclass A(unittest.TestCase):\n    def test_a(self):\n        pass\n")
+            return root
+        cfg = dict(CONFIG, suites=[{"name": "u", "cwd": ".", "format": "jsonl",
+                                    "cmd": ["python3", "{core}", "list-unittest", "tests", "extra"]}])
+        path = os.path.join(self.tmp, "roots.json")
+        self.dump(path, cfg)
+        lists = {}
+        for name, with_extra in (("full", True), ("partial", False)):
+            out = os.path.join(self.tmp, name + ".jsonl")
+            proc = subprocess.run([sys.executable, str(CORE), "list", "--config", path, "--tree",
+                                   tree(name, with_extra), "--out", out], capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            lists[name] = out
+        self.cfg = path
+        # base lacks a root: fine (only adds); head lacks a root the base has: its tests are missing
+        code, out = self.run_gate(extra=["--base-list", lists["partial"], "--head-list", lists["full"]])
+        self.assertEqual(code, 0, out)
+        code, out = self.run_gate(extra=["--base-list", lists["full"], "--head-list", lists["partial"]])
+        self.assertEqual(code, 1)
+        self.assertIn("u::extra/test_extra.py::A.test_a", out)
 
 
 class Invalid(GateCase):

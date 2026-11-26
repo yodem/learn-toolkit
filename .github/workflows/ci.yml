@@ -32,8 +32,21 @@ jobs:
       - name: remove tests-removed label
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh api -X DELETE "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/tests-removed" || echo "label not present (ok)"
+          set +e
+          out="$(gh api -X DELETE "repos/$REPO/issues/$PR_NUMBER/labels/tests-removed" 2>&1)"
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            if printf '%s' "$out" | grep -q 'HTTP 404'; then
+              echo "label not present (ok)"
+            else
+              printf '%s\n' "$out" >&2
+              exit "$rc"
+            fi
+          fi
 
   test-integrity:
     name: test-integrity

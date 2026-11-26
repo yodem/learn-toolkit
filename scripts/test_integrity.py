@@ -3,12 +3,14 @@
 
 Subcommands: list, run, list-unittest.  Python 3.9+, stdlib only.
 Exit codes for `run`: 0 pass, 1 test(s) missing / newly skipped / guarded change, 2 invalid input.
+Limits: skips decided at run time (skipTest(), setUpClass SkipTest, pytest.skip()) are not visible to listing.
 """
 import argparse
 import fnmatch
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import unittest
@@ -91,7 +93,16 @@ def list_suite(suite, tree):
     try:
         core = os.path.abspath(__file__)
         cmd = [a.replace("{core_dir}", os.path.dirname(core)) if a != "{core}" else core for a in suite["cmd"]]
-        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        timeout = suite.get("timeout_s", 600)
+        popen = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                 start_new_session=True)
+        try:
+            stdout, stderr = popen.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(popen.pid, signal.SIGKILL)
+            popen.communicate()
+            raise Invalid("suite %s: lister timed out after %ss" % (name, timeout))
+        proc = subprocess.CompletedProcess(cmd, popen.returncode, stdout, stderr)
     except OSError as e:
         raise Invalid("suite %s: cannot run lister: %s" % (name, e))
     if proc.returncode != 0:
@@ -175,10 +186,9 @@ def _json_values(text):
     return out
 
 
-def label_valid(cfg, labels_file, events_file):
-    """The label must be present now and last applied by a maintainer."""
+def label_valid(cfg, labels, events_text):
+    """The label must be present now and last applied by a maintainer (inputs are already-read text)."""
     label = cfg["label"]
-    labels = _read_text(labels_file)
     present = {x.strip() for x in re.split(r"[,\n]", labels) if x.strip()}
     if labels.strip().startswith("["):
         try:
@@ -188,7 +198,7 @@ def label_valid(cfg, labels_file, events_file):
     if label not in present:
         return False
     try:
-        events = _json_values(_read_text(events_file))
+        events = _json_values(events_text)
     except ValueError:
         return False
     last = None
@@ -231,44 +241,94 @@ def _scripts_of(text):
         return {"<unparseable>": text}
 
 
-def guarded_changes(cfg, base_tree, head_tree, base_ref):
+def _git_show(tree, ref, path):
+    proc = subprocess.run(["git", "-C", tree, "show", "%s:%s" % (ref, path)], capture_output=True, text=True)
+    return proc.stdout if proc.returncode == 0 else ""
+
+
+def guarded_changes(cfg, head_tree, base_ref):
     git(head_tree, "rev-parse", "--verify", "--quiet", base_ref + "^{commit}")
-    changed = [p for p in git(head_tree, "diff", "--name-only", base_ref + "...HEAD").splitlines() if p]
-    hits = ["%s (matches %s)" % (p, g) for p in changed for g in cfg["guarded"] if glob_match(p, g)]
-    hits = sorted(set(hits))
+    raw = git(head_tree, "diff", "--no-renames", "--name-only", "-z", base_ref + "...HEAD")
+    changed = [p for p in raw.split("\0") if p]
+    hits = sorted({"%s (matches %s)" % (p, g) for p in changed for g in cfg["guarded"] if glob_match(p, g)})
     for pj in cfg["guarded_package_scripts"]:
-        if pj not in changed:
-            continue
-        base_text = ""
-        base_path = os.path.join(base_tree, pj)
-        if os.path.exists(base_path):
-            base_text = _read_text(base_path)
-        head_text = _read_text(os.path.join(head_tree, pj))
-        if _scripts_of(base_text) != _scripts_of(head_text):
+        if pj in changed and _scripts_of(_git_show(head_tree, base_ref, pj)) != _scripts_of(_git_show(head_tree, "HEAD", pj)):
             hits.append("%s (scripts changed)" % pj)
     return hits
 
 
+# ---- source check: a lister's output is not trusted alone; ids must still appear in the head tree's source
+
+def _source_probe(suite, tid):
+    """Return (relative file, matcher) for an id, or None when the id cannot be checked."""
+    prefix = suite["name"] + "::"
+    if not tid.startswith(prefix) or suite.get("verify", "") == "none":
+        return None
+    rest = tid[len(prefix):]
+    if "::" not in rest:
+        return None
+    file, rest = rest.split("::", 1)
+    if suite["format"] == "playwright-json":
+        rest = rest.split("::", 1)[-1]
+    mode = suite.get("verify") or ("word" if suite["format"] == "jsonl" else "literal")
+    if mode == "word":
+        seg = rest.split("::")[-1].split("[")[0].split(".")[-1]
+        pat = re.compile(r"(?<!\w)%s(?!\w)" % re.escape(seg)) if seg else None
+        return (file, (lambda text: pat.search(text) is not None)) if pat else None
+    title = rest.split(" > ")[-1]
+    return (file, (lambda text: title in text)) if title else None
+
+
+def _has_source(tree, probe, cache):
+    file, match = probe
+    if file not in cache:
+        try:
+            with open(os.path.join(tree, file), encoding="utf-8", errors="replace") as f:
+                cache[file] = f.read()
+        except OSError:
+            cache[file] = None
+    return cache[file] is not None and match(cache[file])
+
+
+def source_missing(cfg, base_tree, head_tree, ids):
+    """ids present on both sides; returns (ids whose source vanished on head, count unverifiable)."""
+    suites = {s["name"]: s for s in cfg["suites"]}
+    base_cache, head_cache, gone, unverifiable = {}, {}, [], 0
+    for tid in ids:
+        suite = suites.get(tid.split("::", 1)[0])
+        probe = _source_probe(suite, tid) if suite else None
+        if probe is None or not _has_source(base_tree, probe, base_cache):
+            unverifiable += 1
+        elif not _has_source(head_tree, probe, head_cache):
+            gone.append(tid)
+    return gone, unverifiable
+
+
 def cmd_run(args):
     cfg = load_config(args.config)
+    # Judge inputs are read and fixed BEFORE any lister runs (listers execute PR code).
+    guarded = guarded_changes(cfg, args.head_tree, args.base_ref)
+    body_text = _read_text(args.pr_body_file)
+    valid = label_valid(cfg, _read_text(args.labels_file), _read_text(args.label_events_file))
+    excused = exemptions(body_text)
     base = read_list_file(args.base_list) if args.base_list else list_tree(cfg, args.base_tree)
-    head = read_list_file(args.head_list) if args.head_list else list_tree(cfg, args.head_tree)
+    head = read_list_file(args.head_list) if args.head_list else list_tree(cfg, args.head_tree)  # head last
     base_map = {r["id"]: r["skipped"] for r in base}
     head_map = {r["id"]: r["skipped"] for r in head}
-    missing = sorted(i for i in base_map if i not in head_map)
+    missing = {i for i in base_map if i not in head_map}
+    gone, unverifiable = source_missing(cfg, args.base_tree, args.head_tree, [i for i in base_map if i in head_map])
+    forged = set(gone)
+    missing |= forged
     newly_skipped = sorted(i for i in head_map if head_map[i] and i in base_map and not base_map[i])
-    guarded = guarded_changes(cfg, args.base_tree, args.head_tree, args.base_ref)
-
-    valid = label_valid(cfg, args.labels_file, args.label_events_file)
-    excused = exemptions(_read_text(args.pr_body_file))
     for i in sorted(excused):
         if i not in missing and i not in newly_skipped:
             print("test-integrity: warning: exemption names %s, which is not missing or newly skipped" % i)
 
     problems = []
-    for i in missing:
+    for i in sorted(missing):
         if not (valid and i in excused):
-            problems.append("missing on head: %s" % i)
+            note = " (not found in source)" if i in forged else ""
+            problems.append("missing on head%s: %s" % (note, i))
     for i in newly_skipped:
         if not (valid and i in excused):
             problems.append("newly skipped on head: %s" % i)
@@ -282,6 +342,7 @@ def cmd_run(args):
         print("  An exemption needs the %r label from a maintainer after the latest push, "
               "plus a 'tests-removed: <id> -- <reason>' line in the PR body." % cfg["label"])
         return 1
+    print("test-integrity: source check: %d unverifiable id(s)" % unverifiable)
     print("test-integrity: OK base=%d head=%d" % (len(base_map), len(head_map)))
     return 0
 
@@ -307,6 +368,8 @@ def cmd_list_unittest(args):
     tests = []
     for d in args.dirs:
         start = os.path.abspath(d)
+        if not os.path.isdir(start):
+            continue  # a root absent in this tree contributes no tests (its tests then show as missing on head)
         tests.extend(_flatten(unittest.TestLoader().discover(start, top_level_dir=start)))
     rows = []
     for t in tests:
