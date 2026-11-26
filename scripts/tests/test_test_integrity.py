@@ -266,6 +266,62 @@ class Hardening(GateCase):
         self.assertIn("u::extra/test_extra.py::A.test_a", out)
 
 
+class Parsers(GateCase):
+    def load(self):
+        sys.path.insert(0, str(CORE.parent))
+        try:
+            import test_integrity as ti
+        finally:
+            sys.path.pop(0)
+        return ti
+
+    def test_exemption_regex_is_linear_on_dash_runs(self):
+        ti = self.load()
+        import time
+        start = time.time()
+        self.assertEqual(ti.exemptions("tests-removed: x " + "-" * 5000 + "!"), {})
+        self.assertLess(time.time() - start, 0.5)
+
+    def test_exemption_forms(self):
+        ti = self.load()
+        self.assertEqual(ti.exemptions("tests-removed: a::b \u2014 a real reason"), {"a::b": "a real reason"})
+        self.assertEqual(ti.exemptions("tests-removed: a::b -- a real reason"), {"a::b": "a real reason"})
+        self.assertEqual(ti.exemptions("tests-removed: a::b -- short"), {})
+
+    def test_oversized_pr_body_is_2(self):
+        code, out = self.run_gate("x" * 70000)
+        self.assertEqual(code, 2, out)
+
+    def test_playwright_describe_titles_keep_ids_distinct(self):
+        ti = self.load()
+
+        def describe(title):
+            return {"title": title, "file": "x.spec.ts", "specs": [{"title": "works", "file": "x.spec.ts", "tests": [
+                {"projectName": "p", "expectedStatus": "passed", "annotations": []}]}]}
+        payload = {"suites": [{"title": "x.spec.ts", "file": "x.spec.ts", "suites": [describe("A"), describe("B")]}]}
+        got = [i for i, _ in ti._parse_playwright(json.dumps(payload), "/r")]
+        self.assertEqual(got, ["x.spec.ts::p::A > works", "x.spec.ts::p::B > works"])
+
+    def test_duplicate_ids_are_2(self):
+        self.write("tests.jsonl", jl(("a.py::T.one", False), ("a.py::T.one", False)))
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 2, out)
+        self.assertIn("duplicate test id", out)
+
+    def test_same_named_modules_in_two_roots_are_both_listed(self):
+        tree = os.path.join(self.tmp, "two")
+        for d in ("r1", "r2"):
+            os.makedirs(os.path.join(tree, d))
+            with open(os.path.join(tree, d, "test_a.py"), "w", encoding="utf-8") as f:
+                f.write("import unittest\nclass A(unittest.TestCase):\n    def test_a(self):\n        pass\n")
+        proc = subprocess.run([sys.executable, str(CORE), "list-unittest", "r1", "r2"], cwd=tree,
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        ids = [json.loads(line)["id"] for line in proc.stdout.splitlines()]
+        self.assertEqual(ids, ["r1/test_a.py::A.test_a", "r2/test_a.py::A.test_a"])
+
+
 class Invalid(GateCase):
     def test_unresolved_base_is_2(self):
         code, out = self.run_gate(base_ref="no-such-ref")

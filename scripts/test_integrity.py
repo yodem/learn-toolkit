@@ -15,7 +15,9 @@ import subprocess
 import sys
 import unittest
 
-EXEMPT_RE = re.compile(r"^tests-removed:\s*(\S+)\s+(?:—|-{1,3})+\s+(.{8,})$")
+# Linear: single-character-class runs separated by fixed tokens, anchored; the body is capped before parsing.
+EXEMPT_RE = re.compile(r"^tests-removed:[ \t]*(\S+)[ \t]+(?:—|-{1,3})[ \t]+(\S.{7,})$")
+MAX_BODY_BYTES = 65536
 
 
 class Invalid(Exception):
@@ -68,7 +70,9 @@ def _parse_vitest(out, tree):
 
 
 def _walk_playwright(suite, path, tree, acc):
-    here = path + ([suite["title"]] if suite.get("title") and not suite.get("file") else [])
+    title = suite.get("title")
+    # Only the top-level file suite (title == its file) is omitted; every describe title is kept.
+    here = path + ([title] if title and title != suite.get("file") else [])
     for spec in suite.get("specs", []):
         file = _rel(spec.get("file") or suite.get("file") or "", tree)
         for t in spec.get("tests", []):
@@ -118,7 +122,16 @@ def list_suite(suite, tree):
         raise Invalid("suite %s: unparseable lister output (%s: %s)" % (name, type(e).__name__, e))
     if not items:
         raise Invalid("suite %s: lister returned zero tests" % name)
+    _no_duplicates([i for i, _ in items], "suite %s" % name)
     return [{"suite": name, "id": "%s::%s" % (name, i), "skipped": sk} for i, sk in items]
+
+
+def _no_duplicates(ids, where):
+    seen, dup = set(), set()
+    for i in ids:
+        (dup if i in seen else seen).add(i)
+    if dup:
+        raise Invalid("%s: duplicate test id: %s" % (where, sorted(dup)[0]))
 
 
 def list_tree(cfg, tree):
@@ -140,6 +153,7 @@ def read_list_file(path):
         raise Invalid("unparseable test list %s: %s" % (path, e))
     if not rows:
         raise Invalid("empty test list %s" % path)
+    _no_duplicates([r["id"] for r in rows], "list %s" % path)
     return rows
 
 
@@ -309,6 +323,8 @@ def cmd_run(args):
     # Judge inputs are read and fixed BEFORE any lister runs (listers execute PR code).
     guarded = guarded_changes(cfg, args.head_tree, args.base_ref)
     body_text = _read_text(args.pr_body_file)
+    if len(body_text.encode("utf-8")) > MAX_BODY_BYTES:
+        raise Invalid("PR body is larger than %d bytes" % MAX_BODY_BYTES)
     valid = label_valid(cfg, _read_text(args.labels_file), _read_text(args.label_events_file))
     excused = exemptions(body_text)
     base = read_list_file(args.base_list) if args.base_list else list_tree(cfg, args.base_tree)
@@ -364,13 +380,26 @@ def _flatten(suite):
 
 
 def cmd_list_unittest(args):
-    root = os.getcwd()
-    tests = []
+    """Each existing root is listed in its own subprocess, so same-named modules in two roots cannot collide.
+    A root absent in this tree contributes no tests (its tests then show as missing on head)."""
+    if args.single:
+        return _list_unittest_root(args.dirs[0])
     for d in args.dirs:
-        start = os.path.abspath(d)
-        if not os.path.isdir(start):
-            continue  # a root absent in this tree contributes no tests (its tests then show as missing on head)
-        tests.extend(_flatten(unittest.TestLoader().discover(start, top_level_dir=start)))
+        if not os.path.isdir(d):
+            continue
+        proc = subprocess.run([sys.executable, os.path.abspath(__file__), "list-unittest", "--single", d],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        sys.stderr.write(proc.stderr)
+        if proc.returncode != 0:
+            return proc.returncode
+        sys.stdout.write(proc.stdout)
+    return 0
+
+
+def _list_unittest_root(d):
+    root = os.getcwd()
+    start = os.path.abspath(d)
+    tests = list(_flatten(unittest.TestLoader().discover(start, top_level_dir=start)))
     rows = []
     for t in tests:
         cls = type(t)
@@ -405,6 +434,7 @@ def main(argv=None):
     r.add_argument("--base-list")
     r.add_argument("--head-list")
     u = sub.add_parser("list-unittest")
+    u.add_argument("--single", action="store_true", help=argparse.SUPPRESS)
     u.add_argument("dirs", nargs="+")
     args = p.parse_args(argv)
     try:
