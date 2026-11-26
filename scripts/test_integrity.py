@@ -3,6 +3,7 @@
 
 Subcommands: list, run, list-unittest.  Python 3.9+, stdlib only.
 Exit codes for `run`: 0 pass, 1 test(s) missing / newly skipped / guarded change, 2 invalid input.
+See scripts/TEST-INTEGRITY.md for usage and known limits.
 Limits: skips decided at run time (skipTest(), setUpClass SkipTest, pytest.skip()) are not visible to listing.
 """
 import argparse

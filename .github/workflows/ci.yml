@@ -67,18 +67,18 @@ jobs:
       # INSTALL HEAD DEPENDENCIES HERE (learn-toolkit needs none; other repos install what their listers import).
       - name: list head tests with the base gate set
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          listing="$(git ls-tree --name-only "origin/$BASE_REF" scripts/test_integrity.py)"
+          listing="$(git ls-tree --name-only "$BASE_SHA" scripts/test_integrity.py)"
           if [ -z "$listing" ]; then
             echo "BOOTSTRAP: base has no scripts/test_integrity.py; using the PR copy of the core"
             TI_DIR="$GITHUB_WORKSPACE/scripts"
           else
-            git cat-file -e "origin/$BASE_REF:scripts/test_integrity.py"
+            git cat-file -e "$BASE_SHA:scripts/test_integrity.py"
             mkdir -p "$RUNNER_TEMP/ti"
-            git archive "origin/$BASE_REF" scripts | tar -x -C "$RUNNER_TEMP/ti"
+            git archive "$BASE_SHA" scripts | tar -x -C "$RUNNER_TEMP/ti"
             TI_DIR="$RUNNER_TEMP/ti/scripts"
           fi
           python3 "$TI_DIR/test_integrity.py" list --config "$TI_DIR/test-integrity.json" --tree . --head-sha "$PR_HEAD_SHA" --out "$RUNNER_TEMP/head-list.jsonl"
@@ -131,7 +131,7 @@ jobs:
           path: ${{ runner.temp }}/head-list
       - name: compare test lists (base copy of the core judges the PR)
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GH_TOKEN: ${{ github.token }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -139,23 +139,23 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          git worktree add --detach "$RUNNER_TEMP/base" "origin/$BASE_REF"
+          git worktree add --detach "$RUNNER_TEMP/base" "$BASE_SHA"
           # Distinguish "absent on base" from other git errors via ls-tree output, not by ||.
-          listing="$(git ls-tree --name-only "origin/$BASE_REF" scripts/test_integrity.py)"
+          listing="$(git ls-tree --name-only "$BASE_SHA" scripts/test_integrity.py)"
           if [ -z "$listing" ]; then
             echo "BOOTSTRAP: base has no scripts/test_integrity.py; using the PR copy of the core"
             TI_DIR="$GITHUB_WORKSPACE/scripts"
           else
-            git cat-file -e "origin/$BASE_REF:scripts/test_integrity.py"
+            git cat-file -e "$BASE_SHA:scripts/test_integrity.py"
             mkdir -p "$RUNNER_TEMP/ti"
-            git archive "origin/$BASE_REF" scripts | tar -x -C "$RUNNER_TEMP/ti"
+            git archive "$BASE_SHA" scripts | tar -x -C "$RUNNER_TEMP/ti"
             TI_DIR="$RUNNER_TEMP/ti/scripts"
           fi
           printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
           gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '[.labels[].name]' > "$RUNNER_TEMP/labels.json"
           gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/events.json"
           python3 "$TI_DIR/test_integrity.py" run --config "$TI_DIR/test-integrity.json" \
-            --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "origin/$BASE_REF" \
+            --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "$BASE_SHA" \
             --head-list "$RUNNER_TEMP/head-list/head-list.jsonl" --head-sha "$PR_HEAD_SHA" \
             --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.json" \
             --label-events-file "$RUNNER_TEMP/events.json"
