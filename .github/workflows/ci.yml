@@ -73,19 +73,17 @@ jobs:
           listing="$(git ls-tree --name-only "origin/$BASE_REF" scripts/test_integrity.py)"
           if [ -z "$listing" ]; then
             echo "BOOTSTRAP: base has no scripts/test_integrity.py; using the PR copy of the core"
-            CORE="$GITHUB_WORKSPACE/scripts/test_integrity.py"
-            CONFIG="$GITHUB_WORKSPACE/scripts/test-integrity.json"
+            TI_DIR="$GITHUB_WORKSPACE/scripts"
           else
             git cat-file -e "origin/$BASE_REF:scripts/test_integrity.py"
-            git show "origin/$BASE_REF:scripts/test_integrity.py" > "$RUNNER_TEMP/test_integrity.py"
-            git show "origin/$BASE_REF:scripts/test-integrity.json" > "$RUNNER_TEMP/test-integrity.json"
-            CORE="$RUNNER_TEMP/test_integrity.py"
-            CONFIG="$RUNNER_TEMP/test-integrity.json"
+            mkdir -p "$RUNNER_TEMP/ti"
+            git archive "origin/$BASE_REF" scripts | tar -x -C "$RUNNER_TEMP/ti"
+            TI_DIR="$RUNNER_TEMP/ti/scripts"
           fi
           printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
           gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' > "$RUNNER_TEMP/labels.txt"
           gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/events.json"
-          python3 "$CORE" run --config "$CONFIG" \
+          python3 "$TI_DIR/test_integrity.py" run --config "$TI_DIR/test-integrity.json" \
             --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "origin/$BASE_REF" \
             --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.txt" \
             --label-events-file "$RUNNER_TEMP/events.json"

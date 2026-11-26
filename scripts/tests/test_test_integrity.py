@@ -240,6 +240,19 @@ class CoreToken(GateCase):
         self.assertIn("u::tests/test_x.py::A.test_a", proc.stdout)
 
 
+    def test_core_dir_token_points_beside_the_core(self):
+        cfg = dict(CONFIG, suites=[{"name": "d", "cwd": ".", "format": "jsonl", "cmd": [
+            "python3", "-c",
+            "import json,os,sys;print(json.dumps({'id': str(os.path.exists(sys.argv[1] + '/test_integrity.py'))}))",
+            "{core_dir}"]}])
+        path = os.path.join(self.tmp, "dir-cfg.json")
+        self.dump(path, cfg)
+        proc = subprocess.run([sys.executable, str(CORE), "list", "--config", path, "--tree", self.repo],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("d::True", proc.stdout)
+
+
 class Formats(GateCase):
     def parse(self, fmt, payload):
         sys.path.insert(0, str(CORE.parent))

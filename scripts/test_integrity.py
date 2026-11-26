@@ -89,7 +89,8 @@ def list_suite(suite, tree):
     cwd = os.path.join(tree, suite.get("cwd", "."))
     name = suite["name"]
     try:
-        cmd = [os.path.abspath(__file__) if a == "{core}" else a for a in suite["cmd"]]
+        core = os.path.abspath(__file__)
+        cmd = [a.replace("{core_dir}", os.path.dirname(core)) if a != "{core}" else core for a in suite["cmd"]]
         proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     except OSError as e:
         raise Invalid("suite %s: cannot run lister: %s" % (name, e))
