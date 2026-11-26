@@ -38,13 +38,21 @@ jobs:
   test-integrity:
     name: test-integrity
     needs: test-integrity-label
-    if: always() && needs.test-integrity-label.result != 'failure' && github.event_name == 'pull_request'
+    if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
       issues: read
     steps:
+      - name: fail closed if the label reset did not succeed
+        env:
+          LABEL_JOB_RESULT: ${{ needs.test-integrity-label.result }}
+        run: |
+          if [ "$LABEL_JOB_RESULT" = "failure" ] || [ "$LABEL_JOB_RESULT" = "cancelled" ]; then
+            echo "test-integrity: label reset job failed; refusing to judge with a possibly stale label" >&2
+            exit 2
+          fi
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
