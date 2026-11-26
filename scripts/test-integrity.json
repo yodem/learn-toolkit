@@ -4,6 +4,6 @@
   "suites": [
     {"name": "unittest", "cwd": ".", "cmd": ["python3", "{core}", "list-unittest", "maintainer/tests", "scripts/tests"], "format": "jsonl"}
   ],
-  "guarded": [".github/workflows/**", "scripts/test_integrity.py", "scripts/test-integrity.*", "scripts/tests/**", "maintainer/tests/conftest.py"],
+  "guarded": [".github/workflows/**", "scripts/test_integrity.py", "scripts/test-integrity.*", "scripts/verify.sh", "scripts/tests/**", "maintainer/tests/conftest.py"],
   "guarded_package_scripts": []
 }

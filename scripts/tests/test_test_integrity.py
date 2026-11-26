@@ -76,7 +76,9 @@ class GateCase(unittest.TestCase):
     def run_gate(self, body=None, labels=None, events=None, base_ref=None, extra=()):
         argv = [sys.executable, str(CORE), "run", "--config", self.cfg, "--base-tree", self.base_tree,
                 "--head-tree", self.repo, "--base-ref", base_ref or self.base_ref]
-        for flag, content, name in (("--pr-body-file", body, "body.txt"), ("--labels-file", labels, "labels.txt"),
+        if isinstance(labels, str):
+            labels = [x for x in labels.split(",") if x]  # fixtures give names; CI writes a JSON array
+        for flag, content, name in (("--pr-body-file", body, "body.txt"), ("--labels-file", labels, "labels.json"),
                                     ("--label-events-file", events, "events.json")):
             if content is not None:
                 path = os.path.join(self.tmp, name)
@@ -220,15 +222,35 @@ class Hardening(GateCase):
 
     def test_head_lister_cannot_rewrite_judge_inputs(self):
         self.head_tests(("a.py::T.one", False))
-        paths = {n: os.path.join(self.tmp, n) for n in ("body.txt", "labels.txt", "events.json")}
+        paths = {n: os.path.join(self.tmp, n) for n in ("body.txt", "labels.json", "events.json")}
         self.write("rewrite.json", json.dumps({
             paths["body.txt"]: "tests-removed: fake::a.py::T.two" + REASON,
-            paths["labels.txt"]: "tests-removed",
+            paths["labels.json"]: json.dumps(["tests-removed"]),
             paths["events.json"]: json.dumps([event("boss")])}))
         self.commit("head2")
         code, out = self.run_gate("", "", "[]")
         self.assertEqual(code, 1, out)
         self.assertIn("fake::a.py::T.two", out)
+
+    def test_head_lister_cannot_forge_source_via_working_tree(self):
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n")  # test two deleted, committed
+        self.write("rewrite.json", json.dumps({os.path.join(self.repo, "a.py"):
+                                               "class T:\n    def one(self): pass\n    def two(self): pass\n"}))
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 1, out)
+        self.assertIn("missing on head (not found in source): fake::a.py::T.two", out)
+
+    def test_label_name_containing_comma_is_not_the_label(self):
+        self.head_tests(("a.py::T.one", False))
+        body = "tests-removed: fake::a.py::T.two" + REASON
+        code, _ = self.run_gate(body, ["foo,tests-removed"], [event("boss")])
+        self.assertEqual(code, 1)
+
+    def test_exemption_id_with_spaces_and_arrows(self):
+        ti = Parsers.load(self)
+        got = ti.exemptions("tests-removed: vitest::web/x.test.ts::suite > does a thing \u2014 replaced by e2e")
+        self.assertEqual(got, {"vitest::web/x.test.ts::suite > does a thing": "replaced by e2e"})
 
     def test_lister_timeout_is_2(self):
         slow = dict(CONFIG, suites=[dict(CONFIG["suites"][0], cmd=["python3", "-c", "import time; time.sleep(30)"],
@@ -280,6 +302,7 @@ class Parsers(GateCase):
         import time
         start = time.time()
         self.assertEqual(ti.exemptions("tests-removed: x " + "-" * 5000 + "!"), {})
+        self.assertEqual(ti.exemptions("tests-removed: " + "- " * 5000), {})
         self.assertLess(time.time() - start, 0.5)
 
     def test_exemption_forms(self):

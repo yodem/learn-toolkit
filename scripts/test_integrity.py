@@ -15,8 +15,6 @@ import subprocess
 import sys
 import unittest
 
-# Linear: single-character-class runs separated by fixed tokens, anchored; the body is capped before parsing.
-EXEMPT_RE = re.compile(r"^tests-removed:[ \t]*(\S+)[ \t]+(?:—|-{1,3})[ \t]+(\S.{7,})$")
 MAX_BODY_BYTES = 65536
 
 
@@ -169,11 +167,21 @@ def write_rows(rows, out):
 # ---------------------------------------------------------------- run
 
 def exemptions(body):
+    """`tests-removed: <id> -- <reason>` (or an em dash); the id may contain spaces. Split at the earliest separator."""
     found = {}
+    seps = (" \u2014 ", " -- ")
     for line in body.splitlines():
-        m = EXEMPT_RE.match(line.strip())
-        if m:
-            found[m.group(1)] = m.group(2)
+        line = line.strip()
+        if not line.startswith("tests-removed:"):
+            continue
+        rest = line[len("tests-removed:"):]
+        cuts = [(rest.find(sep), sep) for sep in seps if sep in rest]
+        if not cuts:
+            continue
+        c, sep = min(cuts)
+        tid, reason = rest[:c].strip(), rest[c + len(sep):].strip()
+        if tid and len(reason) >= 8:
+            found[tid] = reason
     return found
 
 
@@ -203,12 +211,10 @@ def _json_values(text):
 def label_valid(cfg, labels, events_text):
     """The label must be present now and last applied by a maintainer (inputs are already-read text)."""
     label = cfg["label"]
-    present = {x.strip() for x in re.split(r"[,\n]", labels) if x.strip()}
-    if labels.strip().startswith("["):
-        try:
-            present = {x["name"] if isinstance(x, dict) else x for x in _json_values(labels)}
-        except (ValueError, KeyError, TypeError):
-            present = set()
+    try:
+        present = {x["name"] if isinstance(x, dict) else x for x in _json_values(labels)}
+    except (ValueError, KeyError, TypeError):
+        present = set()
     if label not in present:
         return False
     try:
@@ -260,13 +266,12 @@ def _git_show(tree, ref, path):
     return proc.stdout if proc.returncode == 0 else ""
 
 
-def guarded_changes(cfg, head_tree, base_ref):
-    git(head_tree, "rev-parse", "--verify", "--quiet", base_ref + "^{commit}")
-    raw = git(head_tree, "diff", "--no-renames", "--name-only", "-z", base_ref + "...HEAD")
+def guarded_changes(cfg, head_tree, base_sha, head_sha):
+    raw = git(head_tree, "diff", "--no-renames", "--name-only", "-z", "%s...%s" % (base_sha, head_sha))
     changed = [p for p in raw.split("\0") if p]
     hits = sorted({"%s (matches %s)" % (p, g) for p in changed for g in cfg["guarded"] if glob_match(p, g)})
     for pj in cfg["guarded_package_scripts"]:
-        if pj in changed and _scripts_of(_git_show(head_tree, base_ref, pj)) != _scripts_of(_git_show(head_tree, "HEAD", pj)):
+        if pj in changed and _scripts_of(_git_show(head_tree, base_sha, pj)) != _scripts_of(_git_show(head_tree, head_sha, pj)):
             hits.append("%s (scripts changed)" % pj)
     return hits
 
@@ -293,27 +298,25 @@ def _source_probe(suite, tid):
     return (file, (lambda text: title in text)) if title else None
 
 
-def _has_source(tree, probe, cache):
+def _has_source(repo, sha, probe, cache):
+    """Check committed content only: `git show <sha>:<file>` in the head repo, never the working tree."""
     file, match = probe
     if file not in cache:
-        try:
-            with open(os.path.join(tree, file), encoding="utf-8", errors="replace") as f:
-                cache[file] = f.read()
-        except OSError:
-            cache[file] = None
+        proc = subprocess.run(["git", "-C", repo, "show", "%s:%s" % (sha, file)], capture_output=True)
+        cache[file] = proc.stdout.decode("utf-8", "replace") if proc.returncode == 0 else None
     return cache[file] is not None and match(cache[file])
 
 
-def source_missing(cfg, base_tree, head_tree, ids):
+def source_missing(cfg, repo, base_sha, head_sha, ids):
     """ids present on both sides; returns (ids whose source vanished on head, count unverifiable)."""
     suites = {s["name"]: s for s in cfg["suites"]}
     base_cache, head_cache, gone, unverifiable = {}, {}, [], 0
     for tid in ids:
         suite = suites.get(tid.split("::", 1)[0])
         probe = _source_probe(suite, tid) if suite else None
-        if probe is None or not _has_source(base_tree, probe, base_cache):
+        if probe is None or not _has_source(repo, base_sha, probe, base_cache):
             unverifiable += 1
-        elif not _has_source(head_tree, probe, head_cache):
+        elif not _has_source(repo, head_sha, probe, head_cache):
             gone.append(tid)
     return gone, unverifiable
 
@@ -321,7 +324,9 @@ def source_missing(cfg, base_tree, head_tree, ids):
 def cmd_run(args):
     cfg = load_config(args.config)
     # Judge inputs are read and fixed BEFORE any lister runs (listers execute PR code).
-    guarded = guarded_changes(cfg, args.head_tree, args.base_ref)
+    base_sha = git(args.head_tree, "rev-parse", "--verify", args.base_ref + "^{commit}").strip()
+    head_sha = git(args.head_tree, "rev-parse", "--verify", "HEAD^{commit}").strip()
+    guarded = guarded_changes(cfg, args.head_tree, base_sha, head_sha)
     body_text = _read_text(args.pr_body_file)
     if len(body_text.encode("utf-8")) > MAX_BODY_BYTES:
         raise Invalid("PR body is larger than %d bytes" % MAX_BODY_BYTES)
@@ -332,7 +337,7 @@ def cmd_run(args):
     base_map = {r["id"]: r["skipped"] for r in base}
     head_map = {r["id"]: r["skipped"] for r in head}
     missing = {i for i in base_map if i not in head_map}
-    gone, unverifiable = source_missing(cfg, args.base_tree, args.head_tree, [i for i in base_map if i in head_map])
+    gone, unverifiable = source_missing(cfg, args.head_tree, base_sha, head_sha, [i for i in base_map if i in head_map])
     forged = set(gone)
     missing |= forged
     newly_skipped = sorted(i for i in head_map if head_map[i] and i in base_map and not base_map[i])

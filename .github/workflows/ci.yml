@@ -94,9 +94,9 @@ jobs:
             TI_DIR="$RUNNER_TEMP/ti/scripts"
           fi
           printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
-          gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' > "$RUNNER_TEMP/labels.txt"
+          gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '[.labels[].name]' > "$RUNNER_TEMP/labels.json"
           gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/events.json"
           python3 "$TI_DIR/test_integrity.py" run --config "$TI_DIR/test-integrity.json" \
             --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "origin/$BASE_REF" \
-            --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.txt" \
+            --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.json" \
             --label-events-file "$RUNNER_TEMP/events.json"
