@@ -223,6 +223,23 @@ class Invalid(GateCase):
         self.assertEqual(code, 2, out)
 
 
+class CoreToken(GateCase):
+    def test_base_tree_without_core_is_listed_by_running_core(self):
+        os.makedirs(os.path.join(self.tmp, "t", "tests"))
+        with open(os.path.join(self.tmp, "t", "tests", "test_x.py"), "w", encoding="utf-8") as f:
+            f.write("import unittest\nclass A(unittest.TestCase):\n    def test_a(self):\n        pass\n")
+        cfg = dict(CONFIG, suites=[{"name": "u", "cwd": ".", "cmd": ["python3", "{core}", "list-unittest", "tests"],
+                                    "format": "jsonl"}])
+        path = os.path.join(self.tmp, "core-cfg.json")
+        self.dump(path, cfg)
+        tree = os.path.join(self.tmp, "t")
+        self.assertFalse(os.path.exists(os.path.join(tree, "scripts", "test_integrity.py")))
+        proc = subprocess.run([sys.executable, str(CORE), "list", "--config", path, "--tree", tree],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("u::tests/test_x.py::A.test_a", proc.stdout)
+
+
 class Formats(GateCase):
     def parse(self, fmt, payload):
         sys.path.insert(0, str(CORE.parent))

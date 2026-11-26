@@ -3,6 +3,7 @@ name: ci
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -19,9 +20,64 @@ jobs:
           python-version: "3.12"
       - run: pip install 'ruff==0.8.6'
       - run: bash scripts/verify.sh
-      - name: test integrity
-        if: github.event_name == 'pull_request'
+
+  # A new push or edit voids the maintainer's exemption label; it must be re-applied after the latest push.
+  test-integrity-label:
+    name: test-integrity-label
+    if: github.event_name == 'pull_request' && contains(fromJSON('["synchronize","reopened","edited"]'), github.event.action)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: remove tests-removed label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X DELETE "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/tests-removed" || echo "label not present (ok)"
+
+  test-integrity:
+    name: test-integrity
+    needs: test-integrity-label
+    if: always() && needs.test-integrity-label.result != 'failure' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: compare test lists (base copy of the core judges the PR)
         env:
           BASE_REF: ${{ github.base_ref }}
-          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: bash scripts/test-integrity.sh "origin/$BASE_REF"
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/base" "origin/$BASE_REF"
+          # Distinguish "absent on base" from other git errors via ls-tree output, not by ||.
+          listing="$(git ls-tree --name-only "origin/$BASE_REF" scripts/test_integrity.py)"
+          if [ -z "$listing" ]; then
+            echo "BOOTSTRAP: base has no scripts/test_integrity.py; using the PR copy of the core"
+            CORE="$GITHUB_WORKSPACE/scripts/test_integrity.py"
+            CONFIG="$GITHUB_WORKSPACE/scripts/test-integrity.json"
+          else
+            git cat-file -e "origin/$BASE_REF:scripts/test_integrity.py"
+            git show "origin/$BASE_REF:scripts/test_integrity.py" > "$RUNNER_TEMP/test_integrity.py"
+            git show "origin/$BASE_REF:scripts/test-integrity.json" > "$RUNNER_TEMP/test-integrity.json"
+            CORE="$RUNNER_TEMP/test_integrity.py"
+            CONFIG="$RUNNER_TEMP/test-integrity.json"
+          fi
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
+          gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' > "$RUNNER_TEMP/labels.txt"
+          gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/events.json"
+          python3 "$CORE" run --config "$CONFIG" \
+            --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "origin/$BASE_REF" \
+            --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.txt" \
+            --label-events-file "$RUNNER_TEMP/events.json"

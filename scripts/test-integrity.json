@@ -2,7 +2,7 @@
   "maintainers": ["yodem"],
   "label": "tests-removed",
   "suites": [
-    {"name": "unittest", "cwd": ".", "cmd": ["python3", "scripts/test_integrity.py", "list-unittest", "maintainer/tests"], "format": "jsonl"}
+    {"name": "unittest", "cwd": ".", "cmd": ["python3", "{core}", "list-unittest", "maintainer/tests", "scripts/tests"], "format": "jsonl"}
   ],
   "guarded": [".github/workflows/**", "scripts/test_integrity.py", "scripts/test-integrity.*", "scripts/tests/**", "maintainer/tests/conftest.py"],
   "guarded_package_scripts": []

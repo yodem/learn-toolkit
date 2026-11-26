@@ -89,7 +89,8 @@ def list_suite(suite, tree):
     cwd = os.path.join(tree, suite.get("cwd", "."))
     name = suite["name"]
     try:
-        proc = subprocess.run(suite["cmd"], cwd=cwd, capture_output=True, text=True)
+        cmd = [os.path.abspath(__file__) if a == "{core}" else a for a in suite["cmd"]]
+        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     except OSError as e:
         raise Invalid("suite %s: cannot run lister: %s" % (name, e))
     if proc.returncode != 0:
@@ -301,11 +302,13 @@ def _flatten(suite):
 
 
 def cmd_list_unittest(args):
-    start = os.path.abspath(args.dir)
     root = os.getcwd()
-    suite = unittest.TestLoader().discover(start, top_level_dir=start)
+    tests = []
+    for d in args.dirs:
+        start = os.path.abspath(d)
+        tests.extend(_flatten(unittest.TestLoader().discover(start, top_level_dir=start)))
     rows = []
-    for t in _flatten(suite):
+    for t in tests:
         cls = type(t)
         if cls.__name__ == "_FailedTest":
             print("import failure: %s" % t.id(), file=sys.stderr)
@@ -338,7 +341,7 @@ def main(argv=None):
     r.add_argument("--base-list")
     r.add_argument("--head-list")
     u = sub.add_parser("list-unittest")
-    u.add_argument("dir")
+    u.add_argument("dirs", nargs="+")
     args = p.parse_args(argv)
     try:
         return {"list": cmd_list, "run": cmd_run, "list-unittest": cmd_list_unittest}[args.cmd](args)
