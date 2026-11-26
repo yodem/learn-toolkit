@@ -48,9 +48,50 @@ jobs:
             fi
           fi
 
+  # Listing runs the PR's own test code, so it gets a read-only token, no PR text and no secrets.
+  test-integrity-list:
+    name: test-integrity-list
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # INSTALL HEAD DEPENDENCIES HERE (learn-toolkit needs none; other repos install what their listers import).
+      - name: list head tests with the base gate set
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          listing="$(git ls-tree --name-only "origin/$BASE_REF" scripts/test_integrity.py)"
+          if [ -z "$listing" ]; then
+            echo "BOOTSTRAP: base has no scripts/test_integrity.py; using the PR copy of the core"
+            TI_DIR="$GITHUB_WORKSPACE/scripts"
+          else
+            git cat-file -e "origin/$BASE_REF:scripts/test_integrity.py"
+            mkdir -p "$RUNNER_TEMP/ti"
+            git archive "origin/$BASE_REF" scripts | tar -x -C "$RUNNER_TEMP/ti"
+            TI_DIR="$RUNNER_TEMP/ti/scripts"
+          fi
+          python3 "$TI_DIR/test_integrity.py" list --config "$TI_DIR/test-integrity.json" --tree . --out "$RUNNER_TEMP/head-list.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ti-head-list
+          path: ${{ runner.temp }}/head-list.jsonl
+          retention-days: 1
+          if-no-files-found: error
+
+  # The judge never executes head-tree code, except in the BOOTSTRAP case (base has no gate yet; the PR's core
+  # and config run, a documented trust exception reviewed by hand).
   test-integrity:
     name: test-integrity
-    needs: test-integrity-label
+    needs: [test-integrity-label, test-integrity-list]
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -58,11 +99,16 @@ jobs:
       pull-requests: read
       issues: read
     steps:
-      - name: fail closed if the label reset did not succeed
+      - name: fail closed unless the label reset and the head listing succeeded
         env:
           LABEL_JOB_RESULT: ${{ needs.test-integrity-label.result }}
+          LIST_JOB_RESULT: ${{ needs.test-integrity-list.result }}
         run: |
-          if [ "$LABEL_JOB_RESULT" = "failure" ] || [ "$LABEL_JOB_RESULT" = "cancelled" ]; then
+          if [ "$LIST_JOB_RESULT" != "success" ]; then
+            echo "test-integrity: head listing job did not succeed ($LIST_JOB_RESULT); refusing to judge" >&2
+            exit 2
+          fi
+          if [ "$LABEL_JOB_RESULT" != "success" ] && [ "$LABEL_JOB_RESULT" != "skipped" ]; then
             echo "test-integrity: label reset job failed; refusing to judge with a possibly stale label" >&2
             exit 2
           fi
@@ -72,6 +118,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: ti-head-list
+          path: ${{ runner.temp }}/head-list
       - name: compare test lists (base copy of the core judges the PR)
         env:
           BASE_REF: ${{ github.base_ref }}
@@ -98,5 +148,6 @@ jobs:
           gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/events.json"
           python3 "$TI_DIR/test_integrity.py" run --config "$TI_DIR/test-integrity.json" \
             --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "origin/$BASE_REF" \
+            --head-list "$RUNNER_TEMP/head-list/head-list.jsonl" \
             --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.json" \
             --label-events-file "$RUNNER_TEMP/events.json"

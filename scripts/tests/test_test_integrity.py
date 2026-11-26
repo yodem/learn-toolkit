@@ -249,8 +249,37 @@ class Hardening(GateCase):
 
     def test_exemption_id_with_spaces_and_arrows(self):
         ti = Parsers.load(self)
-        got = ti.exemptions("tests-removed: vitest::web/x.test.ts::suite > does a thing \u2014 replaced by e2e")
-        self.assertEqual(got, {"vitest::web/x.test.ts::suite > does a thing": "replaced by e2e"})
+        tid = "vitest::web/x.test.ts::suite > does a thing"
+        got, _ = ti.exemptions("tests-removed: " + tid + " \u2014 replaced by e2e", {tid})
+        self.assertEqual(got, {tid: "replaced by e2e"})
+
+    def test_exemption_for_id_containing_separator_uses_longest_id(self):
+        ti = Parsers.load(self)
+        got, _ = ti.exemptions("tests-removed: s::f::a -- b -- long enough reason", {"s::f::a", "s::f::a -- b"})
+        self.assertEqual(got, {"s::f::a -- b": "long enough reason"})
+
+    def test_forged_head_list_file_is_caught_by_committed_source(self):
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n")
+        self.commit("head")
+        forged = os.path.join(self.tmp, "forged.jsonl")
+        with open(forged, "w", encoding="utf-8") as f:
+            f.write("".join(json.dumps({"suite": "fake", "id": i, "skipped": False}) + "\n"
+                            for i in ("fake::a.py::T.one", "fake::a.py::T.two")))
+        code, out = self.run_gate(extra=["--head-list", forged])
+        self.assertEqual(code, 1, out)
+        self.assertIn("not found in source", out)
+
+    def test_replace_ref_does_not_change_source_check(self):
+        base_blob = subprocess.run(["git", "-C", self.repo, "rev-parse", "HEAD:a.py"], capture_output=True,
+                                   text=True, check=True).stdout.strip()
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n")
+        self.commit("head")
+        head_blob = subprocess.run(["git", "-C", self.repo, "rev-parse", "HEAD:a.py"], capture_output=True,
+                                   text=True, check=True).stdout.strip()
+        self.git("replace", head_blob, base_blob)  # a plain `git show` would now serve the base content
+        code, out = self.run_gate()
+        self.assertEqual(code, 1, out)
+        self.assertIn("not found in source", out)
 
     def test_lister_timeout_is_2(self):
         slow = dict(CONFIG, suites=[dict(CONFIG["suites"][0], cmd=["python3", "-c", "import time; time.sleep(30)"],
@@ -301,15 +330,17 @@ class Parsers(GateCase):
         ti = self.load()
         import time
         start = time.time()
-        self.assertEqual(ti.exemptions("tests-removed: x " + "-" * 5000 + "!"), {})
-        self.assertEqual(ti.exemptions("tests-removed: " + "- " * 5000), {})
+        self.assertEqual(ti.exemptions("tests-removed: x " + "-" * 5000 + "!", {"x"})[0], {})
+        self.assertEqual(ti.exemptions("tests-removed: " + "- " * 5000, {"x"})[0], {})
         self.assertLess(time.time() - start, 0.5)
 
     def test_exemption_forms(self):
         ti = self.load()
-        self.assertEqual(ti.exemptions("tests-removed: a::b \u2014 a real reason"), {"a::b": "a real reason"})
-        self.assertEqual(ti.exemptions("tests-removed: a::b -- a real reason"), {"a::b": "a real reason"})
-        self.assertEqual(ti.exemptions("tests-removed: a::b -- short"), {})
+        ids = {"a::b"}
+        self.assertEqual(ti.exemptions("tests-removed: a::b \u2014 a real reason", ids)[0], {"a::b": "a real reason"})
+        self.assertEqual(ti.exemptions("tests-removed: a::b -- a real reason", ids)[0], {"a::b": "a real reason"})
+        self.assertEqual(ti.exemptions("tests-removed: a::b -- short", ids)[0], {})
+        self.assertEqual(ti.exemptions("tests-removed: a::b -- short", ids)[1], ["a::b -- short"])
 
     def test_oversized_pr_body_is_2(self):
         code, out = self.run_gate("x" * 70000)
@@ -343,6 +374,33 @@ class Parsers(GateCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         ids = [json.loads(line)["id"] for line in proc.stdout.splitlines()]
         self.assertEqual(ids, ["r1/test_a.py::A.test_a", "r2/test_a.py::A.test_a"])
+
+
+class BadRecords(GateCase):
+    def check(self, lines):
+        self.write("tests.jsonl", lines)
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 2, out)
+
+    def test_missing_skipped_is_2(self):
+        self.check(json.dumps({"id": "a.py::T.one"}) + "\n")
+
+    def test_non_bool_skipped_is_2(self):
+        self.check(json.dumps({"id": "a.py::T.one", "skipped": "no"}) + "\n")
+
+    def test_empty_id_is_2(self):
+        self.check(json.dumps({"id": "", "skipped": False}) + "\n")
+
+    def test_non_object_record_is_2(self):
+        self.check('["a.py::T.one", false]\n')
+
+    def test_bad_list_file_record_is_2(self):
+        path = os.path.join(self.tmp, "bad.jsonl")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"suite": "fake", "id": 5, "skipped": False}) + "\n")
+        code, out = self.run_gate(extra=["--head-list", path])
+        self.assertEqual(code, 2, out)
 
 
 class Invalid(GateCase):
@@ -397,7 +455,7 @@ class CoreToken(GateCase):
     def test_core_dir_token_points_beside_the_core(self):
         cfg = dict(CONFIG, suites=[{"name": "d", "cwd": ".", "format": "jsonl", "cmd": [
             "python3", "-c",
-            "import json,os,sys;print(json.dumps({'id': str(os.path.exists(sys.argv[1] + '/test_integrity.py'))}))",
+            "import json,os,sys;print(json.dumps({'id': str(os.path.exists(sys.argv[1] + '/test_integrity.py')), 'skipped': False}))",
             "{core_dir}"]}])
         path = os.path.join(self.tmp, "dir-cfg.json")
         self.dump(path, cfg)

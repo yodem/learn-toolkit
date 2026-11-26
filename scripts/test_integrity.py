@@ -54,13 +54,17 @@ def _rel(path, tree):
     return path.replace(os.sep, "/")
 
 
+def _record(d):
+    """Strict shape: an object with a non-empty string id and a boolean skipped; anything else is invalid."""
+    if not isinstance(d, dict) or not isinstance(d.get("id"), str) or not d["id"]:
+        raise ValueError("record needs a non-empty string id: %r" % (d,))
+    if not isinstance(d.get("skipped"), bool):
+        raise ValueError("record needs a boolean skipped: %r" % (d,))
+    return d["id"], d["skipped"]
+
+
 def _parse_jsonl(out):
-    items = []
-    for line in out.splitlines():
-        if line.strip():
-            d = json.loads(line)
-            items.append((str(d["id"]), bool(d.get("skipped", False))))
-    return items
+    return [_record(json.loads(line)) for line in out.splitlines() if line.strip()]
 
 
 def _parse_vitest(out, tree):
@@ -146,8 +150,11 @@ def read_list_file(path):
             for line in f:
                 if line.strip():
                     d = json.loads(line)
-                    rows.append({"suite": d["suite"], "id": d["id"], "skipped": bool(d["skipped"])})
-    except (OSError, ValueError, KeyError, TypeError) as e:
+                    tid, skipped = _record(d)
+                    if not isinstance(d.get("suite"), str) or not d["suite"]:
+                        raise ValueError("record needs a non-empty string suite: %r" % (d,))
+                    rows.append({"suite": d["suite"], "id": tid, "skipped": skipped})
+    except (OSError, ValueError) as e:
         raise Invalid("unparseable test list %s: %s" % (path, e))
     if not rows:
         raise Invalid("empty test list %s" % path)
@@ -166,23 +173,30 @@ def write_rows(rows, out):
 
 # ---------------------------------------------------------------- run
 
-def exemptions(body):
-    """`tests-removed: <id> -- <reason>` (or an em dash); the id may contain spaces. Split at the earliest separator."""
-    found = {}
-    seps = (" \u2014 ", " -- ")
+def exemptions(body, known_ids):
+    """Returns ({id: reason}, [unmatched lines]).  A `tests-removed:` line excuses the LONGEST known id that its
+    text starts with, provided a separator (" \u2014 " or " -- ") and a reason of 8+ chars follow it."""
+    ids = sorted(known_ids, key=len, reverse=True)
+    found, unmatched = {}, []
     for line in body.splitlines():
         line = line.strip()
         if not line.startswith("tests-removed:"):
             continue
-        rest = line[len("tests-removed:"):]
-        cuts = [(rest.find(sep), sep) for sep in seps if sep in rest]
-        if not cuts:
-            continue
-        c, sep = min(cuts)
-        tid, reason = rest[:c].strip(), rest[c + len(sep):].strip()
-        if tid and len(reason) >= 8:
-            found[tid] = reason
-    return found
+        rest = line[len("tests-removed:"):].strip()
+        hit = None
+        for tid in ids:
+            tail = rest[len(tid):] if rest.startswith(tid) else None
+            for sep in (" \u2014 ", " -- "):
+                if tail is not None and tail.startswith(sep) and len(tail[len(sep):].strip()) >= 8:
+                    hit = (tid, tail[len(sep):].strip())
+                    break
+            if hit:
+                break
+        if hit:
+            found[hit[0]] = hit[1]
+        else:
+            unmatched.append(rest)
+    return found, unmatched
 
 
 def _read_text(path):
@@ -246,8 +260,13 @@ def glob_match(path, pattern):
     return re.fullmatch(regex, path) is not None or fnmatch.fnmatchcase(path, pattern)
 
 
+def _git_argv(tree):
+    """Every git call ignores replace refs and fsmonitor hooks, so repo-local config cannot change what is read."""
+    return ["git", "--no-replace-objects", "-c", "core.fsmonitor=false", "-C", tree]
+
+
 def git(tree, *args):
-    proc = subprocess.run(["git", "-C", tree] + list(args), capture_output=True, text=True)
+    proc = subprocess.run(_git_argv(tree) + list(args), capture_output=True, text=True)
     if proc.returncode != 0:
         raise Invalid("git %s failed: %s" % (" ".join(args), proc.stderr.strip()))
     return proc.stdout
@@ -262,7 +281,7 @@ def _scripts_of(text):
 
 
 def _git_show(tree, ref, path):
-    proc = subprocess.run(["git", "-C", tree, "show", "%s:%s" % (ref, path)], capture_output=True, text=True)
+    proc = subprocess.run(_git_argv(tree) + ["show", "%s:%s" % (ref, path)], capture_output=True, text=True)
     return proc.stdout if proc.returncode == 0 else ""
 
 
@@ -302,7 +321,7 @@ def _has_source(repo, sha, probe, cache):
     """Check committed content only: `git show <sha>:<file>` in the head repo, never the working tree."""
     file, match = probe
     if file not in cache:
-        proc = subprocess.run(["git", "-C", repo, "show", "%s:%s" % (sha, file)], capture_output=True)
+        proc = subprocess.run(_git_argv(repo) + ["show", "%s:%s" % (sha, file)], capture_output=True)
         cache[file] = proc.stdout.decode("utf-8", "replace") if proc.returncode == 0 else None
     return cache[file] is not None and match(cache[file])
 
@@ -331,7 +350,6 @@ def cmd_run(args):
     if len(body_text.encode("utf-8")) > MAX_BODY_BYTES:
         raise Invalid("PR body is larger than %d bytes" % MAX_BODY_BYTES)
     valid = label_valid(cfg, _read_text(args.labels_file), _read_text(args.label_events_file))
-    excused = exemptions(body_text)
     base = read_list_file(args.base_list) if args.base_list else list_tree(cfg, args.base_tree)
     head = read_list_file(args.head_list) if args.head_list else list_tree(cfg, args.head_tree)  # head last
     base_map = {r["id"]: r["skipped"] for r in base}
@@ -341,9 +359,9 @@ def cmd_run(args):
     forged = set(gone)
     missing |= forged
     newly_skipped = sorted(i for i in head_map if head_map[i] and i in base_map and not base_map[i])
-    for i in sorted(excused):
-        if i not in missing and i not in newly_skipped:
-            print("test-integrity: warning: exemption names %s, which is not missing or newly skipped" % i)
+    excused, unmatched = exemptions(body_text, set(missing) | set(newly_skipped))
+    for line in unmatched:
+        print("test-integrity: warning: exemption line names no missing or newly skipped test: %s" % line[:200])
 
     problems = []
     for i in sorted(missing):
