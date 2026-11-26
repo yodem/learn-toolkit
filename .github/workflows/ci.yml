@@ -60,6 +60,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -67,6 +68,7 @@ jobs:
       - name: list head tests with the base gate set
         env:
           BASE_REF: ${{ github.base_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           listing="$(git ls-tree --name-only "origin/$BASE_REF" scripts/test_integrity.py)"
@@ -79,7 +81,7 @@ jobs:
             git archive "origin/$BASE_REF" scripts | tar -x -C "$RUNNER_TEMP/ti"
             TI_DIR="$RUNNER_TEMP/ti/scripts"
           fi
-          python3 "$TI_DIR/test_integrity.py" list --config "$TI_DIR/test-integrity.json" --tree . --out "$RUNNER_TEMP/head-list.jsonl"
+          python3 "$TI_DIR/test_integrity.py" list --config "$TI_DIR/test-integrity.json" --tree . --head-sha "$PR_HEAD_SHA" --out "$RUNNER_TEMP/head-list.jsonl"
       - uses: actions/upload-artifact@v4
         with:
           name: ti-head-list
@@ -87,6 +89,10 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  # The PR body and head sha come from the event payload of THIS run (never a live fetch), and the core rejects a
+  # head list made for another sha. This closes the overlap where an `edited` or `labeled` run could be judged with a
+  # body or a head that a later push or edit changed. Labels and label events are still read live, which is stricter:
+  # a label removed after the event no longer counts.
   # The judge never executes head-tree code, except in the BOOTSTRAP case (base has no gate yet; the PR's core
   # and config run, a documented trust exception reviewed by hand).
   test-integrity:
@@ -115,6 +121,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -127,6 +134,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           GH_TOKEN: ${{ github.token }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -148,6 +156,6 @@ jobs:
           gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/events.json"
           python3 "$TI_DIR/test_integrity.py" run --config "$TI_DIR/test-integrity.json" \
             --base-tree "$RUNNER_TEMP/base" --head-tree "$GITHUB_WORKSPACE" --base-ref "origin/$BASE_REF" \
-            --head-list "$RUNNER_TEMP/head-list/head-list.jsonl" \
+            --head-list "$RUNNER_TEMP/head-list/head-list.jsonl" --head-sha "$PR_HEAD_SHA" \
             --pr-body-file "$RUNNER_TEMP/pr-body.txt" --labels-file "$RUNNER_TEMP/labels.json" \
             --label-events-file "$RUNNER_TEMP/events.json"

@@ -376,6 +376,106 @@ class Parsers(GateCase):
         self.assertEqual(ids, ["r1/test_a.py::A.test_a", "r2/test_a.py::A.test_a"])
 
 
+SKIP = "@unittest." + "skip"  # built from parts so this file's own marker count does not move
+
+
+class SkipMarkers(GateCase):
+    def add_marker(self):
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n    %s('x')\n    def two(self):\n        pass\n" % SKIP)
+        self.commit("head")
+
+    def test_added_marker_fails_even_when_list_says_not_skipped(self):
+        self.add_marker()
+        code, out = self.run_gate()
+        self.assertEqual(code, 1, out)
+        self.assertIn("skip markers added: a.py (+", out)
+
+    def test_added_marker_passes_with_maintainer_label(self):
+        self.add_marker()
+        code, out = self.run_gate("", "tests-removed", [event("boss")])
+        self.assertEqual(code, 0, out)
+
+    def test_removed_marker_is_fine(self):
+        self.write("a.py", "class T:\n    %s('x')\n    def one(self):\n        pass\n    def two(self):\n        pass\n" % SKIP)
+        self.git("add", "-A")
+        self.git("commit", "-q", "--amend", "-m", "base")  # base now has the marker
+        self.base_ref = subprocess.run(["git", "-C", self.repo, "rev-parse", "HEAD"], check=True,
+                                       capture_output=True, text=True).stdout.strip()
+        self.git("worktree", "remove", "--force", self.base_tree)
+        self.git("worktree", "add", "-q", "--detach", self.base_tree, self.base_ref)
+        self.write("a.py", "class T:\n    def one(self):\n        pass\n    def two(self):\n        pass\n")
+        self.commit("head")
+        code, out = self.run_gate()
+        self.assertEqual(code, 0, out)
+
+
+class HeadSha(GateCase):
+    def head(self):
+        return subprocess.run(["git", "-C", self.repo, "rev-parse", "HEAD"], check=True, capture_output=True,
+                              text=True).stdout.strip()
+
+    def make_list(self, sha=None):
+        out = os.path.join(self.tmp, "hl.jsonl")
+        argv = [sys.executable, str(CORE), "list", "--config", self.cfg, "--tree", self.repo, "--out", out]
+        if sha:
+            argv += ["--head-sha", sha]
+        proc = subprocess.run(argv, capture_output=True, text=True)
+        return proc.returncode, out, proc.stderr
+
+    def test_matching_sha_passes(self):
+        self.write("note.txt", "x")
+        self.commit("head")
+        sha = self.head()
+        rc, out, _ = self.make_list(sha)
+        self.assertEqual(rc, 0)
+        code, text = self.run_gate(extra=["--head-list", out, "--head-sha", sha])
+        self.assertEqual(code, 0, text)
+
+    def test_list_for_another_sha_is_2(self):
+        self.write("note.txt", "x")
+        self.commit("head")
+        rc, out, _ = self.make_list(self.head())
+        self.assertEqual(rc, 0)
+        code, text = self.run_gate(extra=["--head-list", out, "--head-sha", "0" * 40])
+        self.assertEqual(code, 2, text)
+
+    def test_list_without_meta_is_2_when_sha_given(self):
+        self.write("note.txt", "x")
+        self.commit("head")
+        rc, out, _ = self.make_list()
+        self.assertEqual(rc, 0)
+        code, text = self.run_gate(extra=["--head-list", out, "--head-sha", self.head()])
+        self.assertEqual(code, 2, text)
+
+    def test_list_refuses_wrong_tree_head(self):
+        rc, _, err = self.make_list("1" * 40)
+        self.assertEqual(rc, 2, err)
+
+
+class ConfigValidation(GateCase):
+    def test_bad_configs_are_2(self):
+        good = CONFIG["suites"][0]
+        bad = {
+            "empty name": dict(CONFIG, suites=[dict(good, name="")]),
+            "duplicate name": dict(CONFIG, suites=[good, dict(good)]),
+            "empty cmd": dict(CONFIG, suites=[dict(good, cmd=[])]),
+            "non-string cmd": dict(CONFIG, suites=[dict(good, cmd=["python3", 5])]),
+            "bad cwd": dict(CONFIG, suites=[dict(good, cwd=3)]),
+            "zero timeout": dict(CONFIG, suites=[dict(good, timeout_s=0)]),
+            "bad verify": dict(CONFIG, suites=[dict(good, verify="fuzzy")]),
+            "maintainers not strings": dict(CONFIG, maintainers=[1]),
+            "guarded not list": dict(CONFIG, guarded="x"),
+            "package scripts not strings": dict(CONFIG, guarded_package_scripts=[2]),
+            "bad regex": dict(CONFIG, skip_markers=["("]),
+            "no suites": dict(CONFIG, suites=[]),
+        }
+        for label, cfg in bad.items():
+            with self.subTest(label):
+                self.dump(self.cfg, cfg)
+                code, out = self.run_gate()
+                self.assertEqual(code, 2, out)
+
+
 class BadRecords(GateCase):
     def check(self, lines):
         self.write("tests.jsonl", lines)

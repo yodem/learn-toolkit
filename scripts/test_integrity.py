@@ -32,19 +32,59 @@ def _load_json(path):
         raise Invalid("cannot read JSON %s: %s" % (path, e))
 
 
+DEFAULT_SKIP_MARKERS = [
+    r"@unittest\.skip(?:If|Unless)?\b", r"\.skipTest\(", r"raise\s+(?:unittest\.)?SkipTest",
+    r"pytest\.mark\.(?:skip|skipif|xfail)\b", r"pytest\.skip\(",
+    r"\.(?:skip|skipIf|todo|only|fixme)\(",  # js: it.skip( .todo( test.fixme( it.only( (only hides the others)
+    r"\b(?:xit|xdescribe|xtest)\(",
+]
+
+
+def _str_list(cfg, key, required):
+    val = cfg.get(key, None if required else [])
+    if not isinstance(val, list) or not all(isinstance(x, str) for x in val):
+        raise Invalid("config key %r must be a list of strings" % key)
+    return val
+
+
 def load_config(path):
     cfg = _load_json(path)
     if not isinstance(cfg, dict):
         raise Invalid("config must be an object")
-    for key, typ in (("maintainers", list), ("label", str), ("suites", list), ("guarded", list)):
-        if not isinstance(cfg.get(key), typ):
-            raise Invalid("config key %r missing or wrong type" % key)
+    _str_list(cfg, "maintainers", True)
+    _str_list(cfg, "guarded", True)
+    _str_list(cfg, "guarded_package_scripts", False)
+    if not isinstance(cfg.get("label"), str) or not cfg["label"]:
+        raise Invalid("config key 'label' must be a non-empty string")
+    if not isinstance(cfg.get("suites"), list) or not cfg["suites"]:
+        raise Invalid("config key 'suites' must be a non-empty list")
     cfg.setdefault("guarded_package_scripts", [])
+    names = set()
     for s in cfg["suites"]:
-        if not isinstance(s, dict) or not all(k in s for k in ("name", "cmd", "format")):
-            raise Invalid("each suite needs name, cmd, format")
-        if s["format"] not in ("jsonl", "vitest-json", "playwright-json"):
-            raise Invalid("suite %s: unknown format %r" % (s["name"], s["format"]))
+        if not isinstance(s, dict):
+            raise Invalid("each suite must be an object")
+        name = s.get("name")
+        if not isinstance(name, str) or not name or name in names:
+            raise Invalid("suite name must be a unique non-empty string: %r" % (name,))
+        names.add(name)
+        if not isinstance(s.get("cmd"), list) or not s["cmd"] or not all(isinstance(x, str) for x in s["cmd"]):
+            raise Invalid("suite %s: cmd must be a non-empty list of strings" % name)
+        if not isinstance(s.get("cwd", "."), str):
+            raise Invalid("suite %s: cwd must be a string" % name)
+        t = s.get("timeout_s", 600)
+        if isinstance(t, bool) or not isinstance(t, (int, float)) or t <= 0:
+            raise Invalid("suite %s: timeout_s must be a positive number" % name)
+        if s.get("verify", "word") not in ("word", "literal", "none"):
+            raise Invalid("suite %s: verify must be word, literal or none" % name)
+        if s.get("format") not in ("jsonl", "vitest-json", "playwright-json"):
+            raise Invalid("suite %s: unknown format %r" % (name, s.get("format")))
+    markers = _str_list(cfg, "skip_markers", False) or DEFAULT_SKIP_MARKERS
+    for m in markers:
+        try:
+            re.compile(m)
+        except re.error as e:
+            raise Invalid("skip_markers: invalid regex %r: %s" % (m, e))
+    cfg["skip_markers"] = markers
     return cfg
 
 
@@ -144,12 +184,16 @@ def list_tree(cfg, tree):
 
 
 def read_list_file(path):
-    rows = []
+    """Returns (rows, meta); an optional first record {"meta": {...}} carries the head sha the list was made for."""
+    rows, meta = [], {}
     try:
         with open(path, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     d = json.loads(line)
+                    if isinstance(d, dict) and set(d) == {"meta"} and isinstance(d["meta"], dict):
+                        meta = d["meta"]
+                        continue
                     tid, skipped = _record(d)
                     if not isinstance(d.get("suite"), str) or not d["suite"]:
                         raise ValueError("record needs a non-empty string suite: %r" % (d,))
@@ -159,11 +203,11 @@ def read_list_file(path):
     if not rows:
         raise Invalid("empty test list %s" % path)
     _no_duplicates([r["id"] for r in rows], "list %s" % path)
-    return rows
+    return rows, meta
 
 
-def write_rows(rows, out):
-    text = "".join(json.dumps(r, sort_keys=True) + "\n" for r in rows)
+def write_rows(rows, out, meta=None):
+    text = (json.dumps({"meta": meta}) + "\n" if meta else "") + "".join(json.dumps(r, sort_keys=True) + "\n" for r in rows)
     if out:
         with open(out, "w", encoding="utf-8") as f:
             f.write(text)
@@ -340,6 +384,28 @@ def source_missing(cfg, repo, base_sha, head_sha, ids):
     return gone, unverifiable
 
 
+def _file_of(tid):
+    parts = tid.split("::")
+    return parts[1] if len(parts) > 2 else None
+
+
+def skip_marker_additions(cfg, repo, base_sha, head_sha, ids):
+    """Trusted skip state: count skip markers in the committed base and head blobs of every file with a base id."""
+    regexes = [re.compile(m) for m in cfg["skip_markers"]]
+
+    def count(sha, file):
+        proc = subprocess.run(_git_argv(repo) + ["show", "%s:%s" % (sha, file)], capture_output=True)
+        text = proc.stdout.decode("utf-8", "replace") if proc.returncode == 0 else ""
+        return sum(len(r.findall(text)) for r in regexes)
+
+    hits = []
+    for file in sorted({f for f in map(_file_of, ids) if f}):
+        added = count(head_sha, file) - count(base_sha, file)
+        if added > 0:
+            hits.append("skip markers added: %s (+%d)" % (file, added))
+    return hits
+
+
 def cmd_run(args):
     cfg = load_config(args.config)
     # Judge inputs are read and fixed BEFORE any lister runs (listers execute PR code).
@@ -350,14 +416,22 @@ def cmd_run(args):
     if len(body_text.encode("utf-8")) > MAX_BODY_BYTES:
         raise Invalid("PR body is larger than %d bytes" % MAX_BODY_BYTES)
     valid = label_valid(cfg, _read_text(args.labels_file), _read_text(args.label_events_file))
-    base = read_list_file(args.base_list) if args.base_list else list_tree(cfg, args.base_tree)
-    head = read_list_file(args.head_list) if args.head_list else list_tree(cfg, args.head_tree)  # head last
+    if args.head_sha and args.head_sha != head_sha:
+        raise Invalid("checked-out head %s is not the event head sha %s" % (head_sha, args.head_sha))
+    base = read_list_file(args.base_list)[0] if args.base_list else list_tree(cfg, args.base_tree)
+    if args.head_list:
+        head, meta = read_list_file(args.head_list)
+        if args.head_sha and meta.get("head_sha") != args.head_sha:
+            raise Invalid("head list was made for %s, not the event head sha %s" % (meta.get("head_sha"), args.head_sha))
+    else:
+        head = list_tree(cfg, args.head_tree)  # head last
     base_map = {r["id"]: r["skipped"] for r in base}
     head_map = {r["id"]: r["skipped"] for r in head}
     missing = {i for i in base_map if i not in head_map}
     gone, unverifiable = source_missing(cfg, args.head_tree, base_sha, head_sha, [i for i in base_map if i in head_map])
     forged = set(gone)
     missing |= forged
+    markers = skip_marker_additions(cfg, args.head_tree, base_sha, head_sha, list(base_map))
     newly_skipped = sorted(i for i in head_map if head_map[i] and i in base_map and not base_map[i])
     excused, unmatched = exemptions(body_text, set(missing) | set(newly_skipped))
     for line in unmatched:
@@ -371,6 +445,8 @@ def cmd_run(args):
     for i in newly_skipped:
         if not (valid and i in excused):
             problems.append("newly skipped on head: %s" % i)
+    if markers and not valid:
+        problems.extend(markers)
     if guarded and not valid:
         problems.extend("guarded change without a valid %s label: %s" % (cfg["label"], g) for g in guarded)
 
@@ -388,7 +464,13 @@ def cmd_run(args):
 
 def cmd_list(args):
     cfg = load_config(args.config)
-    write_rows(list_tree(cfg, args.tree), args.out)
+    meta = None
+    if args.head_sha:
+        actual = git(args.tree, "rev-parse", "--verify", "HEAD^{commit}").strip()
+        if actual != args.head_sha:
+            raise Invalid("tree HEAD %s is not the expected head sha %s" % (actual, args.head_sha))
+        meta = {"head_sha": actual}
+    write_rows(list_tree(cfg, args.tree), args.out, meta)
     return 0
 
 
@@ -446,6 +528,7 @@ def main(argv=None):
     a.add_argument("--config", required=True)
     a.add_argument("--tree", required=True)
     a.add_argument("--out")
+    a.add_argument("--head-sha")
     r = sub.add_parser("run")
     r.add_argument("--config", required=True)
     r.add_argument("--base-tree", required=True)
@@ -456,6 +539,7 @@ def main(argv=None):
     r.add_argument("--label-events-file")
     r.add_argument("--base-list")
     r.add_argument("--head-list")
+    r.add_argument("--head-sha", help="PR head sha from the event payload; the head list must carry the same sha")
     u = sub.add_parser("list-unittest")
     u.add_argument("--single", action="store_true", help=argparse.SUPPRESS)
     u.add_argument("dirs", nargs="+")
